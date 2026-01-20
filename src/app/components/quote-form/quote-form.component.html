@@ -1,0 +1,51 @@
+<div>
+  <div class="flex items-center gap-4 mb-6">
+    <button (click)="goBack()" class="text-gray-600 hover:text-gray-800">
+      ← Back to Orders
+    </button>
+    <h2 class="text-2xl font-bold text-gray-800">Get New Quote</h2>
+  </div>
+
+  <div class="bg-white rounded-lg shadow p-6 max-w-2xl">
+    <div class="space-y-4">
+      @if (errorMessage()) {
+        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+          {{ errorMessage() }}
+        </div>
+      }
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">
+          Origin Zip Code
+        </label>
+        <input
+          type="text"
+          [ngModel]="originZip()"
+          (ngModelChange)="originZip.set($event)"
+          maxlength="5"
+          class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          placeholder="Enter origin zip code" />
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">
+          Destination Zip Code
+        </label>
+        <input
+          type="text"
+          [ngModel]="destinationZip()"
+          (ngModelChange)="destinationZip.set($event)"
+          maxlength="5"
+          class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          placeholder="Enter destination zip code" />
+      </div>
+
+      <button
+        (click)="generateQuote()"
+        [disabled]="loading()"
+        class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400">
+        {{ loading() ? 'Generating Quote...' : 'Generate Quote' }}
+      </button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,121 @@
+<div class="min-h-screen">
+
+  <!-- Loading State -->
+  <div *ngIf="loading()" class="flex flex-col items-center justify-center py-16 px-4">
+    <div class="w-12 h-12 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin"></div>
+    <p class="mt-4 text-sm text-gray-600 font-medium">Loading order...</p>
+  </div>
+
+  <!-- Order Details -->
+  <div *ngIf="!loading() && order() as currentOrder">
+
+    <!-- Header -->
+    <div class="flex items-center gap-4 mb-8">
+      <button (click)="goBack()"
+        class="inline-flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 px-3 py-2 rounded-lg transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+        </svg>
+        Back to Orders
+      </button>
+
+      <h2 class="text-3xl font-bold text-gray-900">
+        Order Details: {{ currentOrder.id }}
+      </h2>
+    </div>
+
+    <!-- Alerts -->
+    <div *ngIf="successMessage()" class="mb-6 bg-green-50 border-l-4 border-green-500 p-4 rounded-r-lg">
+      <p class="text-sm font-medium text-green-800">{{ successMessage() }}</p>
+    </div>
+
+    <div *ngIf="errorMessage()" class="mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg">
+      <p class="text-sm font-medium text-red-800">{{ errorMessage() }}</p>
+    </div>
+
+    <!-- Order Summary -->
+    <div class="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden mb-8">
+      <div class="border-b border-gray-200 p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+
+        <div>
+          <div class="text-xs font-semibold text-gray-500 uppercase mb-1">Order ID</div>
+          <div class="text-lg font-bold">{{ currentOrder.id }}</div>
+        </div>
+
+        <div>
+          <div class="text-xs font-semibold text-gray-500 uppercase mb-1">Status</div>
+          <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium"
+            [ngClass]="currentOrder.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'">
+            {{ currentOrder.status }}
+          </span>
+        </div>
+
+        <div>
+          <div class="text-xs font-semibold text-gray-500 uppercase mb-1">Total Price</div>
+          <div class="text-lg font-bold">${{ currentOrder.totalPrice.toFixed(2) }}</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Moves Table -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+      <table class="w-full">
+        <thead class="bg-gray-100 border-b">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">#</th>
+            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Type</th>
+            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Origin</th>
+            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Destination</th>
+            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y">
+
+          <tr *ngFor="let move of currentOrder.moves; let i = index">
+            <td class="px-6 py-4 text-sm text-gray-900">{{ move.moveOrder }}</td>
+            <td class="px-6 py-4 text-sm text-gray-900">{{ getMoveTypeLabel(move.moveType) }}</td>
+
+            <!-- Origin Input -->
+            <td class="px-6 py-4">
+              <input type="text" placeholder="Zip" [(ngModel)]="move.origin.zip" readonly
+                class="border rounded px-2 py-1 w-20 mr-2" />
+              <input type="text" placeholder="Address" [(ngModel)]="move.origin.address" readonly
+                class="border rounded px-2 py-1 w-40" />
+            </td>
+
+            <!-- Destination Input -->
+            <td class="px-6 py-4">
+              <input type="text" placeholder="Zip" [(ngModel)]="move.destination.zip"
+                (ngModelChange)="onMoveFieldChange(move, 'destination')" class="border rounded px-2 py-1 w-20 mr-2" />
+              <input type="text" placeholder="Address" [(ngModel)]="move.destination.address"
+                (ngModelChange)="onMoveFieldChange(move, 'destination')" class="border rounded px-2 py-1 w-40" />
+            </td>
+            <!-- Actions -->
+            <td class="px-6 py-4">
+              <button type="button" (click)="removeMove(i)"
+                [disabled]="move.moveType === 'ORIGIN_PICKUP' || move.moveType === 'FINAL_DELIVERY'"
+                class="text-red-600 hover:text-red-800 text-sm font-medium mr-2">
+                Remove
+              </button>
+              <button type="button" (click)="addMoveAfter(i)" [disabled]="!canAddMoveAfter(i)"
+                class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                Add Move
+              </button>
+            </td>
+          </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Save Button -->
+    <div class="mt-6">
+      <button type="button" (click)="saveOrder()" [disabled]="saving()"
+        class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">
+        {{ saving() ? 'Saving...' : 'Save Order' }}
+      </button>
+    </div>
+
+  </div>
+</div>

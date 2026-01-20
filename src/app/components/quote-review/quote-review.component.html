@@ -1,0 +1,49 @@
+@if (quote(); as currentQuote) {
+  <div>
+    <div class="flex items-center gap-4 mb-6">
+      <button (click)="goBack()" class="text-gray-600 hover:text-gray-800">
+        ← Back
+      </button>
+      <h2 class="text-2xl font-bold text-gray-800">Quote Details</h2>
+    </div>
+
+    <div class="bg-white rounded-lg shadow p-6 max-w-4xl">
+      <div class="mb-6">
+        <div class="text-3xl font-bold text-gray-900 mb-2">
+          ${{ currentQuote.price }}
+        </div>
+        <div class="text-sm text-gray-600">Total Quote Price</div>
+      </div>
+
+      <div class="space-y-4 mb-6">
+        <h3 class="font-semibold text-gray-800 flex items-center gap-2">
+          📍 Planned Route ({{ currentQuote.moves.length }} moves)
+        </h3>
+        @for (move of currentQuote.moves; track move.id; let i = $index) {
+          <div class="border-l-4 border-blue-600 pl-4 py-2">
+            <div class="text-sm font-medium text-gray-700">Move {{ i + 1 }}</div>
+            <div class="text-sm text-gray-600">
+              <div>From: {{ move.origin.address }} ({{ move.origin.zip }})</div>
+              <div>To: {{ move.destination.address }} ({{ move.destination.zip }})</div>
+            </div>
+          </div>
+        }
+      </div>
+
+      <div class="flex gap-4">
+        <button
+          (click)="acceptQuote()"
+          [disabled]="loading()"
+          class="flex-1 bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 disabled:bg-gray-400 flex items-center justify-center gap-2">
+          ✓ Accept Quote & Create Order
+        </button>
+        <button
+          (click)="rejectQuote()"
+          [disabled]="loading()"
+          class="flex-1 bg-red-600 text-white py-3 rounded-lg hover:bg-red-700 disabled:bg-gray-400 flex items-center justify-center gap-2">
+          ✗ Reject Quote
+        </button>
+      </div>
+    </div>
+  </div>
+}
