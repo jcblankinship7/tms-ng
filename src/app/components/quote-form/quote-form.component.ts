@@ -110,8 +110,6 @@ export class QuoteFormComponent implements OnInit {
   pallets = signal<number | null>(null);
   dimensions = signal('');
   notes = signal('');
-  // Free-form beneficial owner input (not persisted to Quote on the backend)
-  beneficialOwnerFreeform = signal('');
 
   loading = signal(false);
   errorMessage = signal('');
@@ -285,8 +283,6 @@ export class QuoteFormComponent implements OnInit {
         }
 
         this.notes.set(raw.notes || quote.notes || '');
-        // Prefill free-form beneficial owner if present in the raw payload or mapped quote
-        this.beneficialOwnerFreeform.set(raw?.beneficialOwnerName || (quote as any).beneficialOwnerName || '');
         this.weight.set(raw.weight || quote.weight || null);
 
       } else if (quote.moves && Array.isArray(quote.moves) && quote.moves.length > 0) {
@@ -345,8 +341,6 @@ export class QuoteFormComponent implements OnInit {
         }
 
         this.notes.set(quote.notes || '');
-        // Prefill free-form beneficial owner from mapped quote if present
-        this.beneficialOwnerFreeform.set((quote as any).beneficialOwnerName || '');
         this.weight.set(quote.weight || null);
       }
     } catch (e) {
@@ -420,8 +414,6 @@ export class QuoteFormComponent implements OnInit {
 
             // Notes and weight fallback
             this.notes.set(raw.notes || quote.notes || '');
-            // Prefill free-form beneficial owner if present in the raw payload or mapped quote
-            this.beneficialOwnerFreeform.set(raw?.beneficialOwnerName || (quote as any).beneficialOwnerName || '');
             this.weight.set(raw.weight || quote.weight || null);
 
           } else if (quote.moves && Array.isArray(quote.moves) && quote.moves.length > 0) {
