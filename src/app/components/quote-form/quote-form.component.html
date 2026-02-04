@@ -1,51 +1,697 @@
 <div>
   <div class="flex items-center gap-4 mb-6">
     <button (click)="goBack()" class="text-gray-600 hover:text-gray-800">
-      ← Back to Orders
+      ← Back to Quotes
     </button>
-    <h2 class="text-2xl font-bold text-gray-800">Get New Quote</h2>
+    <h2 class="text-2xl font-bold text-gray-800">Request Quote</h2>
   </div>
 
-  <div class="bg-white rounded-lg shadow p-6 max-w-2xl">
-    <div class="space-y-4">
-      @if (errorMessage()) {
-        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-          {{ errorMessage() }}
+  <div class="bg-white rounded-lg shadow p-6 max-w-3xl">
+    <!-- Rate Limit Warning -->
+    @if (rateLimitWarning()) {
+      <div class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-6">
+        <strong>⚠️ Notice:</strong> {{ rateLimitWarning() }}
+      </div>
+    }
+
+    <!-- Rate Limit Status (when available) - Admin only -->
+    @if (isAdmin() && locationSearchService.rateLimitStatus() && locationSearchService.rateLimitStatus()?.message) {
+      <div class="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-2 rounded mb-4 text-sm flex items-center justify-between">
+        <div>
+          <strong>Azure Maps Usage:</strong> {{ locationSearchService.rateLimitStatus()!.requestsThisMonth }}/{{ locationSearchService.rateLimitStatus()!.maxRequestsPerMonth }} monthly transactions • 
+          {{ locationSearchService.rateLimitStatus()!.requestsThisMinute }}/{{ locationSearchService.rateLimitStatus()!.maxRequestsPerMinute }} QPS
+        </div>
+        <div class="ml-4 info-icon" role="img" aria-label="Azure Maps usage info" title="Monthly transactions: requests this month / monthly limit. QPS: requests this minute / per-minute limit (shows current queries per second).">ⓘ</div>
+      </div>
+    }
+
+    <!-- Success Message -->
+    @if (successMessage()) {
+      <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6">
+        {{ successMessage() }}
+      </div>
+    }
+
+    <!-- Error Message -->
+    @if (errorMessage()) {
+      <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
+        {{ errorMessage() }}
+      </div>
+    }
+
+    <!-- Quote Type Selection -->
+    <div class="mb-8 pb-6 border-b">
+      <label class="block text-sm font-semibold text-gray-700 mb-4">Quote Type</label>
+      <div class="flex gap-4">
+        @if (isCustomerDefaultCustom()) {
+          <!-- When customer's preference is Custom, show a single disabled Custom option -->
+          <label class="flex items-center gap-2 cursor-default">
+            <input
+              type="radio"
+              name="quoteType"
+              value="Custom"
+              checked
+              disabled
+              class="w-4 h-4" />
+            <span class="font-medium text-gray-700">Custom Quote</span>
+            <span class="text-sm text-gray-500">(Customer-specific quotes)</span>
+          </label>
+        } @else if (isCustomerDefaultSpot()) {
+          <!-- When customer's preference is Spot, show a single disabled Spot option -->
+          <label class="flex items-center gap-2 cursor-default">
+            <input
+              type="radio"
+              name="quoteType"
+              value="Spot"
+              checked
+              disabled
+              class="w-4 h-4" />
+            <span class="font-medium text-gray-700">Spot Quote</span>
+            <span class="text-sm text-gray-500">(Quick quote with zip codes)</span>
+          </label>
+        } @else {
+          <!-- No enforced preference: show both selectable options -->
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input
+              type="radio"
+              name="quoteType"
+              value="Spot"
+              [checked]="quoteType() === 'Spot'"
+              (change)="quoteType.set('Spot')"
+              class="w-4 h-4" />
+            <span class="font-medium text-gray-700">Spot Quote</span>
+            <span class="text-sm text-gray-500">(Quick quote with zip codes)</span>
+          </label>
+
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input
+              type="radio"
+              name="quoteType"
+              value="Custom"
+              [checked]="quoteType() === 'Custom'"
+              (change)="quoteType.set('Custom')"
+              class="w-4 h-4" />
+            <span class="font-medium text-gray-700">Custom Quote</span>
+            <span class="text-sm text-gray-500">(Request a custom quote with more details)</span>
+          </label>
+        }
+      </div>
+    </div>
+
+    <div class="space-y-6">
+
+      <!-- CUSTOM QUOTE FORM -->
+      @if (quoteType() === 'Custom') {
+        <div class="space-y-6">
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Weight (lbs)</label>
+              <input type="number" [(ngModel)]="weight" placeholder="Enter weight in pounds" title="Weight in pounds" class="w-full px-4 py-2 border rounded-lg" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Pallets</label>
+              <input type="number" [(ngModel)]="pallets" placeholder="Number of pallets" title="Number of pallets" class="w-full px-4 py-2 border rounded-lg" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Commodity Type</label>
+              <input type="text" [(ngModel)]="commodityType" placeholder="e.g., Electronics" title="Commodity type" class="w-full px-4 py-2 border rounded-lg" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Dimensions</label>
+              <input type="text" [(ngModel)]="dimensions" placeholder="LxWxH or notes" title="Dimensions" class="w-full px-4 py-2 border rounded-lg" />
+            </div>
+            <div class="col-span-2">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+              <textarea rows="4" [(ngModel)]="notes" placeholder="Additional shipment notes" title="Notes" class="w-full px-4 py-2 border rounded-lg"></textarea>
+            </div>
+            <div class="col-span-2">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Beneficial Owner (optional)</label>
+              <input type="text" [(ngModel)]="beneficialOwnerFreeform" placeholder="e.g., C.H. Robinson - Spot" title="Free-form beneficial owner" class="w-full px-4 py-2 border rounded-lg" />
+            </div>
+          </div>
         </div>
       }
 
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">
-          Origin Zip Code
-        </label>
-        <input
-          type="text"
-          [ngModel]="originZip()"
-          (ngModelChange)="originZip.set($event)"
-          maxlength="5"
-          class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          placeholder="Enter origin zip code" />
-      </div>
+      <!-- SPOT QUOTE FORM -->
+      @if (quoteType() === 'Spot') {
+        <div class="space-y-6">
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div class="space-y-6">
+            <!-- INITIAL PICKUP LOCATION -->
+            <div>
+              <!-- Input Type Toggle -->
+              <div class="flex gap-2 mb-2">
+                <button
+                  type="button"
+                  (click)="onOriginInputTypeChange('zipcode')"
+                  [class.bg-blue-600]="originInputType() === 'zipcode'"
+                  [class.text-white]="originInputType() === 'zipcode'"
+                  [class.bg-gray-200]="originInputType() !== 'zipcode'"
+                  [class.text-gray-700]="originInputType() !== 'zipcode'"
+                  class="px-3 py-1 rounded text-sm font-medium">
+                  Zip Code
+                </button>
+                <button
+                  type="button"
+                  (click)="onOriginInputTypeChange('citystate')"
+                  [class.bg-blue-600]="originInputType() === 'citystate'"
+                  [class.text-white]="originInputType() === 'citystate'"
+                  [class.bg-gray-200]="originInputType() !== 'citystate'"
+                  [class.text-gray-700]="originInputType() !== 'citystate'"
+                  class="px-3 py-1 rounded text-sm font-medium">
+                  City, State
+                </button>
+              </div>
 
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">
-          Destination Zip Code
-        </label>
-        <input
-          type="text"
-          [ngModel]="destinationZip()"
-          (ngModelChange)="destinationZip.set($event)"
-          maxlength="5"
-          class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          placeholder="Enter destination zip code" />
-      </div>
+              <!-- Zip Code Input -->
+              @if (originInputType() === 'zipcode') {
+                <div class="relative">
+                  <input
+                    type="text"
+                    [ngModel]="originZipCode()"
+                    (ngModelChange)="onOriginZipCodeChange($event)"
+                    maxlength="10"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Enter zip code (e.g., 60601)" />
+                  @if (originSearching()) {
+                    <div class="absolute right-3 top-3 text-gray-400">
+                      <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 1 0 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                    </div>
+                  }
+                </div>
+              }
 
-      <button
-        (click)="generateQuote()"
-        [disabled]="loading()"
-        class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400">
-        {{ loading() ? 'Generating Quote...' : 'Generate Quote' }}
-      </button>
+              <!-- City/State Input -->
+              @if (originInputType() === 'citystate') {
+                <div class="relative">
+                  <input
+                    type="text"
+                    [ngModel]="originCityState()"
+                    (ngModelChange)="onOriginCityStateChange($event)"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Enter city and state (e.g., Chicago, IL)" />
+                  @if (originSearching()) {
+                    <div class="absolute right-3 top-3 text-gray-400">
+                      <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 1 0 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                    </div>
+                  }
+                </div>
+              }
+
+              <!-- Search Results Dropdown -->
+              @if (originShowResults() && originSearchResults().length > 0) {
+                <div class="border border-gray-300 rounded-lg mt-1 max-h-60 overflow-y-auto bg-white shadow-lg">
+                  @for (result of originSearchResults(); track result.id) {
+                    <button
+                      type="button"
+                      (click)="selectOriginLocation(result)"
+                      class="w-full text-left px-4 py-2 hover:bg-blue-50 border-b border-gray-100 last:border-b-0">
+                      <div class="font-medium text-gray-900">{{ result.displayName }}</div>
+                      <div class="text-sm text-gray-600">
+                        {{ result.city }}, {{ result.stateCode }} {{ result.zipCode }}
+                      </div>
+                    </button>
+                  }
+                </div>
+              }
+
+              <!-- Selected Origin Display -->
+              @if (selectedOrigin()) {
+                <div class="bg-green-50 border border-green-200 rounded-lg p-3 flex items-start gap-2">
+                  <svg class="w-5 h-5 text-green-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                  </svg>
+                  <div class="flex-1">
+                    <div class="font-medium text-gray-900">{{ selectedOrigin()!.city }}, {{ selectedOrigin()!.state }}</div>
+                    <div class="text-sm text-gray-600">Zip: {{ selectedOrigin()!.zipCode }}</div>
+                  </div>
+                </div>
+              }
+            </div>
+
+            <!-- ORIGIN STOP TYPE PREFERENCE -->
+            <div class="space-y-3 bg-blue-50 rounded-lg p-4 border border-blue-200">
+              <label class="block text-sm font-semibold text-gray-700">Origin Stop Type</label>
+              <div class="flex gap-4">
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="originStopType"
+                    value="Stay"
+                    [checked]="originStopType() === 'Stay'"
+                    (change)="originStopType.set('Stay')"
+                    class="w-4 h-4" />
+                  <span class="text-sm text-gray-700">Stay</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="originStopType"
+                    value="Drop"
+                    [checked]="originStopType() === 'Drop'"
+                    (change)="originStopType.set('Drop')"
+                    class="w-4 h-4" />
+                  <span class="text-sm text-gray-700">Drop</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- EXTRA PICKUP LOCATION (Optional) -->
+            <div class="space-y-3 bg-purple-50 rounded-lg p-4 border border-purple-200">
+              <div class="flex items-center justify-between">
+                <label class="block text-sm font-semibold text-gray-700">Extra Pickup Location (Optional)</label>
+                <button
+                  type="button"
+                  (click)="showExtraOrigin.set(!showExtraOrigin())"
+                  class="text-sm text-blue-600 hover:text-blue-800 font-medium">
+                  {{ showExtraOrigin() ? 'Hide' : 'Add Extra Stop' }}
+                </button>
+              </div>
+
+              @if (showExtraOrigin()) {
+                <!-- Input Type Toggle -->
+                <div class="flex gap-2 mb-2">
+                  <button
+                    type="button"
+                    (click)="onExtraOriginInputTypeChange('zipcode')"
+                    [class.bg-blue-600]="extraOriginInputType() === 'zipcode'"
+                    [class.text-white]="extraOriginInputType() === 'zipcode'"
+                    [class.bg-gray-200]="extraOriginInputType() !== 'zipcode'"
+                    [class.text-gray-700]="extraOriginInputType() !== 'zipcode'"
+                    class="px-3 py-1 rounded text-sm font-medium">
+                    Zip Code
+                  </button>
+                  <button
+                    type="button"
+                    (click)="onExtraOriginInputTypeChange('citystate')"
+                    [class.bg-blue-600]="extraOriginInputType() === 'citystate'"
+                    [class.text-white]="extraOriginInputType() === 'citystate'"
+                    [class.bg-gray-200]="extraOriginInputType() !== 'citystate'"
+                    [class.text-gray-700]="extraOriginInputType() !== 'citystate'"
+                    class="px-3 py-1 rounded text-sm font-medium">
+                    City, State
+                  </button>
+                </div>
+
+                <!-- Zip Code Input -->
+                @if (extraOriginInputType() === 'zipcode') {
+                  <div class="relative">
+                    <input
+                      type="text"
+                      [ngModel]="extraOriginZipCode()"
+                      (ngModelChange)="onExtraOriginZipCodeChange($event)"
+                      maxlength="10"
+                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Enter zip code" />
+                    @if (extraOriginSearching()) {
+                      <div class="absolute right-3 top-3 text-gray-400">
+                        <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 1 0 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                      </div>
+                    }
+                  </div>
+                }
+
+                <!-- City/State Input -->
+                @if (extraOriginInputType() === 'citystate') {
+                  <div class="relative">
+                    <input
+                      type="text"
+                      [ngModel]="extraOriginCityState()"
+                      (ngModelChange)="onExtraOriginCityStateChange($event)"
+                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Enter city and state" />
+                    @if (extraOriginSearching()) {
+                      <div class="absolute right-3 top-3 text-gray-400">
+                        <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 1 0 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                      </div>
+                    }
+                  </div>
+                }
+
+                <!-- Search Results Dropdown -->
+                @if (extraOriginShowResults() && extraOriginSearchResults().length > 0) {
+                  <div class="border border-gray-300 rounded-lg mt-1 max-h-60 overflow-y-auto bg-white shadow-lg">
+                    @for (result of extraOriginSearchResults(); track result.id) {
+                      <button
+                        type="button"
+                        (click)="selectExtraOriginLocation(result)"
+                        class="w-full text-left px-4 py-2 hover:bg-blue-50 border-b border-gray-100 last:border-b-0">
+                        <div class="font-medium text-gray-900">{{ result.displayName }}</div>
+                        <div class="text-sm text-gray-600">
+                          {{ result.city }}, {{ result.stateCode }} {{ result.zipCode }}
+                        </div>
+                      </button>
+                    }
+                  </div>
+                }
+
+                <!-- Selected Extra Origin Display -->
+                @if (selectedExtraOrigin()) {
+                  <div class="bg-green-50 border border-green-200 rounded-lg p-3 flex items-start gap-2">
+                    <svg class="w-5 h-5 text-green-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    <div class="flex-1">
+                      <div class="font-medium text-gray-900">{{ selectedExtraOrigin()!.city }}, {{ selectedExtraOrigin()!.state }}</div>
+                      <div class="text-sm text-gray-600">Zip: {{ selectedExtraOrigin()!.zipCode }}</div>
+                    </div>
+                  </div>
+                }
+
+                <!-- Extra Pickup Stop Type -->
+                <div class="space-y-2 mt-3">
+                  <label class="block text-sm font-medium text-gray-700">Extra Pickup Stop Type</label>
+                  <div class="flex gap-4">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="extraOriginStopType"
+                        value="Stay"
+                        [checked]="extraOriginStopType() === 'Stay'"
+                        (change)="extraOriginStopType.set('Stay')"
+                        class="w-4 h-4" />
+                      <span class="text-sm text-gray-700">Stay</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="extraOriginStopType"
+                        value="Drop"
+                        [checked]="extraOriginStopType() === 'Drop'"
+                        (change)="extraOriginStopType.set('Drop')"
+                        class="w-4 h-4" />
+                      <span class="text-sm text-gray-700">Drop</span>
+                    </label>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+
+          <div class="space-y-6">
+            <!-- FINAL DELIVERY LOCATION -->
+            <div class="space-y-3">
+              <label class="block text-sm font-semibold text-gray-700">Final Delivery Location <span class="text-red-500">*</span></label>
+              
+              <!-- Input Type Toggle -->
+              <div class="flex gap-2 mb-2">
+                <button
+                  type="button"
+                  (click)="onDestinationInputTypeChange('zipcode')"
+                  [class.bg-blue-600]="destinationInputType() === 'zipcode'"
+                  [class.text-white]="destinationInputType() === 'zipcode'"
+                  [class.bg-gray-200]="destinationInputType() !== 'zipcode'"
+                  [class.text-gray-700]="destinationInputType() !== 'zipcode'"
+                  class="px-3 py-1 rounded text-sm font-medium">
+                  Zip Code
+                </button>
+                <button
+                  type="button"
+                  (click)="onDestinationInputTypeChange('citystate')"
+                  [class.bg-blue-600]="destinationInputType() === 'citystate'"
+                  [class.text-white]="destinationInputType() === 'citystate'"
+                  [class.bg-gray-200]="destinationInputType() !== 'citystate'"
+                  [class.text-gray-700]="destinationInputType() !== 'citystate'"
+                  class="px-3 py-1 rounded text-sm font-medium">
+                  City, State
+                </button>
+              </div>
+
+              <!-- Zip Code Input -->
+              @if (destinationInputType() === 'zipcode') {
+                <div class="relative">
+                  <input
+                    type="text"
+                    [ngModel]="destinationZipCode()"
+                    (ngModelChange)="onDestinationZipCodeChange($event)"
+                    maxlength="10"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Enter zip code (e.g., 33101)" />
+                  @if (destinationSearching()) {
+                    <div class="absolute right-3 top-3 text-gray-400">
+                      <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 1 0 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                    </div>
+                  }
+                </div>
+              }
+
+              <!-- City/State Input -->
+              @if (destinationInputType() === 'citystate') {
+                <div class="relative">
+                  <input
+                    type="text"
+                    [ngModel]="destinationCityState()"
+                    (ngModelChange)="onDestinationCityStateChange($event)"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Enter city and state (e.g., Miami, FL)" />
+                  @if (destinationSearching()) {
+                    <div class="absolute right-3 top-3 text-gray-400">
+                      <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 1 0 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                    </div>
+                  }
+                </div>
+              }
+
+              <!-- Search Results Dropdown -->
+              @if (destinationShowResults() && destinationSearchResults().length > 0) {
+                <div class="border border-gray-300 rounded-lg mt-1 max-h-60 overflow-y-auto bg-white shadow-lg">
+                  @for (result of destinationSearchResults(); track result.id) {
+                    <button
+                      type="button"
+                      (click)="selectDestinationLocation(result)"
+                      class="w-full text-left px-4 py-2 hover:bg-blue-50 border-b border-gray-100 last:border-b-0">
+                      <div class="font-medium text-gray-900">{{ result.displayName }}</div>
+                      <div class="text-sm text-gray-600">
+                        {{ result.city }}, {{ result.stateCode }} {{ result.zipCode }}
+                      </div>
+                    </button>
+                  }
+                </div>
+              }
+
+              <!-- Selected Destination Display -->
+              @if (selectedDestination()) {
+                <div class="bg-green-50 border border-green-200 rounded-lg p-3 flex items-start gap-2">
+                  <svg class="w-5 h-5 text-green-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                  </svg>
+                  <div class="flex-1">
+                    <div class="font-medium text-gray-900">{{ selectedDestination()!.city }}, {{ selectedDestination()!.state }}</div>
+                    <div class="text-sm text-gray-600">Zip: {{ selectedDestination()!.zipCode }}</div>
+                  </div>
+                </div>
+              }
+            </div>
+
+            <!-- DESTINATION STOP TYPE PREFERENCE -->
+            <div class="space-y-3 bg-blue-50 rounded-lg p-4 border border-blue-200">
+              <label class="block text-sm font-semibold text-gray-700">Destination Stop Type</label>
+              <div class="flex gap-4">
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="destinationStopType"
+                    value="Stay"
+                    [checked]="destinationStopType() === 'Stay'"
+                    (change)="destinationStopType.set('Stay')"
+                    class="w-4 h-4" />
+                  <span class="text-sm text-gray-700">Stay</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="destinationStopType"
+                    value="Drop"
+                    [checked]="destinationStopType() === 'Drop'"
+                    (change)="destinationStopType.set('Drop')"
+                    class="w-4 h-4" />
+                  <span class="text-sm text-gray-700">Drop</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- EXTRA DELIVERY LOCATION (Optional) -->
+            <div class="space-y-3 bg-purple-50 rounded-lg p-4 border border-purple-200">
+              <div class="flex items-center justify-between">
+                <label class="block text-sm font-semibold text-gray-700">Extra Delivery Location (Optional)</label>
+                <button
+                  type="button"
+                  (click)="showExtraDestination.set(!showExtraDestination())"
+                  class="text-sm text-blue-600 hover:text-blue-800 font-medium">
+                  {{ showExtraDestination() ? 'Hide' : 'Add Extra Stop' }}
+                </button>
+              </div>
+
+              @if (showExtraDestination()) {
+                <!-- Input Type Toggle -->
+                <div class="flex gap-2 mb-2">
+                  <button
+                    type="button"
+                    (click)="onExtraDestinationInputTypeChange('zipcode')"
+                    [class.bg-blue-600]="extraDestinationInputType() === 'zipcode'"
+                    [class.text-white]="extraDestinationInputType() === 'zipcode'"
+                    [class.bg-gray-200]="extraDestinationInputType() !== 'zipcode'"
+                    [class.text-gray-700]="extraDestinationInputType() !== 'zipcode'"
+                    class="px-3 py-1 rounded text-sm font-medium">
+                    Zip Code
+                  </button>
+                  <button
+                    type="button"
+                    (click)="onExtraDestinationInputTypeChange('citystate')"
+                    [class.bg-blue-600]="extraDestinationInputType() === 'citystate'"
+                    [class.text-white]="extraDestinationInputType() === 'citystate'"
+                    [class.bg-gray-200]="extraDestinationInputType() !== 'citystate'"
+                    [class.text-gray-700]="extraDestinationInputType() !== 'citystate'"
+                    class="px-3 py-1 rounded text-sm font-medium">
+                    City, State
+                  </button>
+                </div>
+
+                <!-- Zip Code Input -->
+                @if (extraDestinationInputType() === 'zipcode') {
+                  <div class="relative">
+                    <input
+                      type="text"
+                      [ngModel]="extraDestinationZipCode()"
+                      (ngModelChange)="onExtraDestinationZipCodeChange($event)"
+                      maxlength="10"
+                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Enter zip code" />
+                    @if (extraDestinationSearching()) {
+                      <div class="absolute right-3 top-3 text-gray-400">
+                        <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 1 0 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                      </div>
+                    }
+                  </div>
+                }
+
+                <!-- City/State Input -->
+                @if (extraDestinationInputType() === 'citystate') {
+                  <div class="relative">
+                    <input
+                      type="text"
+                      [ngModel]="extraDestinationCityState()"
+                      (ngModelChange)="onExtraDestinationCityStateChange($event)"
+                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Enter city and state" />
+                    @if (extraDestinationSearching()) {
+                      <div class="absolute right-3 top-3 text-gray-400">
+                        <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 1 0 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                      </div>
+                    }
+                  </div>
+                }
+
+                <!-- Search Results Dropdown -->
+                @if (extraDestinationShowResults() && extraDestinationSearchResults().length > 0) {
+                  <div class="border border-gray-300 rounded-lg mt-1 max-h-60 overflow-y-auto bg-white shadow-lg">
+                    @for (result of extraDestinationSearchResults(); track result.id) {
+                      <button
+                        type="button"
+                        (click)="selectExtraDestinationLocation(result)"
+                        class="w-full text-left px-4 py-2 hover:bg-blue-50 border-b border-gray-100 last:border-b-0">
+                        <div class="font-medium text-gray-900">{{ result.displayName }}</div>
+                        <div class="text-sm text-gray-600">
+                          {{ result.city }}, {{ result.stateCode }} {{ result.zipCode }}
+                        </div>
+                      </button>
+                    }
+                  </div>
+                }
+
+                <!-- Selected Extra Destination Display -->
+                @if (selectedExtraDestination()) {
+                  <div class="bg-green-50 border border-green-200 rounded-lg p-3 flex items-start gap-2">
+                    <svg class="w-5 h-5 text-green-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    <div class="flex-1">
+                      <div class="font-medium text-gray-900">{{ selectedExtraDestination()!.city }}, {{ selectedExtraDestination()!.state }}</div>
+                      <div class="text-sm text-gray-600">Zip: {{ selectedExtraDestination()!.zipCode }}</div>
+                    </div>
+                  </div>
+                }
+
+                <!-- Extra Delivery Stop Type -->
+                <div class="space-y-2 mt-3">
+                  <label class="block text-sm font-medium text-gray-700">Extra Delivery Stop Type</label>
+                  <div class="flex gap-4">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="extraDestinationStopType"
+                        value="Stay"
+                        [checked]="extraDestinationStopType() === 'Stay'"
+                        (change)="extraDestinationStopType.set('Stay')"
+                        class="w-4 h-4" />
+                      <span class="text-sm text-gray-700">Stay</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="extraDestinationStopType"
+                        value="Drop"
+                        [checked]="extraDestinationStopType() === 'Drop'"
+                        (change)="extraDestinationStopType.set('Drop')"
+                        class="w-4 h-4" />
+                      <span class="text-sm text-gray-700">Drop</span>
+                    </label>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+
+
+        <!-- Free-form Beneficial Owner for spot quotes -->
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Beneficial Owner (optional)</label>
+          <input type="text" [(ngModel)]="beneficialOwnerFreeform" placeholder="e.g., C.H. Robinson - Spot" title="Free-form beneficial owner" class="w-full px-4 py-2 border rounded-lg" />
+        </div>
+
+        <!-- Submit Button -->
+        @if (quoteType() === 'Spot') {
+          <button
+            (click)="generateSpotQuote()"
+            [disabled]="loading() || !selectedOrigin() || !selectedDestination()"
+            class="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium text-lg transition-colors">
+            {{ loading() ? 'Generating Quote...' : 'Get Instant Quote' }}
+          </button>
+        } @else {
+          <button
+            (click)="generateCustomQuote()"
+            [disabled]="loading() || !selectedOrigin() || !selectedDestination()"
+            class="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium text-lg transition-colors">
+            {{ loading() ? 'Requesting...' : 'Request Custom Quote' }}
+          </button>
+        }
+        </div>
+      }
     </div>
   </div>
 </div>

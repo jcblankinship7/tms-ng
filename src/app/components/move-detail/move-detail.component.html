@@ -1,0 +1,162 @@
+<div class="min-h-screen" style="background-color: #F8F8F8;">
+  @if (loading()) {
+    <div class="flex items-center justify-center py-20">
+      <div class="text-xl text-gray-600">Loading move details...</div>
+    </div>
+  } @else if (errorMessage()) {
+    <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-6">
+      <p class="text-red-700 font-semibold">{{ errorMessage() }}</p>
+    </div>
+  } @else if (move(); as currentMove) {
+    <div class="max-w-6xl mx-auto p-6">
+      <!-- Header -->
+      <div class="flex items-center justify-between mb-8">
+        <div>
+          <h1 class="text-4xl font-bold text-gray-900">Move Details</h1>
+          <p class="text-gray-600 mt-2">Move ID: {{ currentMove.id }}</p>
+        </div>
+        <button
+          (click)="goBack()"
+          class="px-6 py-2 rounded font-semibold text-white transition-colors"
+          style="background-color: #003DA5;">
+          Back to Moves
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- Move Type and Status -->
+        <div class="bg-white rounded-lg shadow-lg p-8">
+          <h2 class="text-2xl font-bold text-gray-900 mb-6" style="color: #002855;">Move Information</h2>
+          
+          <div class="space-y-4">
+            <div class="border-b pb-4">
+              <p class="text-sm text-gray-600 font-semibold uppercase">Move Type</p>
+              <p class="text-lg font-semibold text-gray-900 mt-1">{{ getMoveTypeLabel(currentMove.moveType) }}</p>
+            </div>
+            
+            <div class="border-b pb-4">
+              <p class="text-sm text-gray-600 font-semibold uppercase">Move Order</p>
+              <p class="text-lg font-semibold text-gray-900 mt-1">{{ currentMove.moveOrder }}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Origin Stop -->
+        <div class="bg-white rounded-lg shadow-lg p-8">
+          <h2 class="text-2xl font-bold text-gray-900 mb-6" style="color: #002855;">Origin Stop</h2>
+          
+          <div class="space-y-4">
+            <div class="border-b pb-4">
+              <p class="text-sm text-gray-600 font-semibold uppercase">Address</p>
+              <p class="text-lg font-semibold text-gray-900 mt-1">{{ currentMove.origin.address }}</p>
+            </div>
+            
+            <div class="border-b pb-4">
+              <p class="text-sm text-gray-600 font-semibold uppercase">ZIP Code</p>
+              <p class="text-lg font-semibold text-gray-900 mt-1">{{ currentMove.origin.zip }}</p>
+            </div>
+
+            @if (currentMove.originArrivalTime) {
+              <div class="border-b pb-4">
+                <p class="text-sm text-gray-600 font-semibold uppercase">Arrival Time</p>
+                <p class="text-lg font-semibold text-gray-900 mt-1">{{ formatDateTime(currentMove.originArrivalTime) }}</p>
+              </div>
+            }
+
+            @if (currentMove.originDepartureTime) {
+              <div>
+                <p class="text-sm text-gray-600 font-semibold uppercase">Departure Time</p>
+                <p class="text-lg font-semibold text-gray-900 mt-1">{{ formatDateTime(currentMove.originDepartureTime) }}</p>
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Destination Stop -->
+        <div class="bg-white rounded-lg shadow-lg p-8">
+          <h2 class="text-2xl font-bold text-gray-900 mb-6" style="color: #002855;">Destination Stop</h2>
+          
+          <div class="space-y-4">
+            <div class="border-b pb-4">
+              <p class="text-sm text-gray-600 font-semibold uppercase">Address</p>
+              <p class="text-lg font-semibold text-gray-900 mt-1">{{ currentMove.destination.address }}</p>
+            </div>
+            
+            <div class="border-b pb-4">
+              <p class="text-sm text-gray-600 font-semibold uppercase">ZIP Code</p>
+              <p class="text-lg font-semibold text-gray-900 mt-1">{{ currentMove.destination.zip }}</p>
+            </div>
+
+            @if (currentMove.destinationArrivalTime) {
+              <div class="border-b pb-4">
+                <p class="text-sm text-gray-600 font-semibold uppercase">Arrival Time</p>
+                <p class="text-lg font-semibold text-gray-900 mt-1">{{ formatDateTime(currentMove.destinationArrivalTime) }}</p>
+              </div>
+            }
+
+            @if (currentMove.destinationDepartureTime) {
+              <div>
+                <p class="text-sm text-gray-600 font-semibold uppercase">Departure Time</p>
+                <p class="text-lg font-semibold text-gray-900 mt-1">{{ formatDateTime(currentMove.destinationDepartureTime) }}</p>
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Shipment Details -->
+        @if (currentMove.shipmentDetails) {
+          <div class="bg-white rounded-lg shadow-lg p-8">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6" style="color: #002855;">Shipment Details</h2>
+            
+            <div class="space-y-4">
+              @if (currentMove.shipmentDetails.containerSealNumber) {
+                <div class="border-b pb-4">
+                  <p class="text-sm text-gray-600 font-semibold uppercase">Container Seal Number</p>
+                  <p class="text-lg font-semibold text-gray-900 mt-1" style="color: #FFB81C;">{{ currentMove.shipmentDetails.containerSealNumber }}</p>
+                </div>
+              }
+              
+              @if (currentMove.shipmentDetails.weight) {
+                <div class="border-b pb-4">
+                  <p class="text-sm text-gray-600 font-semibold uppercase">Weight</p>
+                  <p class="text-lg font-semibold text-gray-900 mt-1">{{ currentMove.shipmentDetails.weight }} {{ currentMove.shipmentDetails.weightUnit || 'lbs' }}</p>
+                </div>
+              }
+
+              @if (currentMove.shipmentDetails.commodityType) {
+                <div class="border-b pb-4">
+                  <p class="text-sm text-gray-600 font-semibold uppercase">Commodity Type</p>
+                  <p class="text-lg font-semibold text-gray-900 mt-1">{{ currentMove.shipmentDetails.commodityType }}</p>
+                </div>
+              }
+
+              @if (currentMove.shipmentDetails.description) {
+                <div class="border-b pb-4">
+                  <p class="text-sm text-gray-600 font-semibold uppercase">Description</p>
+                  <p class="text-lg font-semibold text-gray-900 mt-1">{{ currentMove.shipmentDetails.description }}</p>
+                </div>
+              }
+
+              @if (currentMove.shipmentDetails.hazardous !== undefined) {
+                <div>
+                  <p class="text-sm text-gray-600 font-semibold uppercase">Hazardous Material</p>
+                  <div class="mt-1">
+                    @if (currentMove.shipmentDetails.hazardous) {
+                      <span class="inline-block px-4 py-2 rounded font-bold text-white" style="background-color: #DC2626;">Yes - Hazardous</span>
+                    } @else {
+                      <span class="inline-block px-4 py-2 rounded font-bold text-white" style="background-color: #16A34A;">No - Standard</span>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  } @else {
+    <div class="text-center py-20">
+      <p class="text-gray-600 text-lg">Move not found</p>
+    </div>
+  }
+</div>

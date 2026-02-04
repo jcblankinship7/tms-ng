@@ -1,0 +1,302 @@
+<div class="min-h-screen bg-gray-50">
+  <!-- Header -->
+  <div class="bg-white shadow">
+    <div class="max-w-4xl mx-auto px-6 py-6">
+      <h1 class="text-3xl font-bold" style="color: #002855;">Create Order from Quote</h1>
+      <p class="text-gray-600 mt-2">Enter appointment details to complete your order</p>
+    </div>
+  </div>
+
+  <div class="max-w-4xl mx-auto p-6">
+    @if (loading()) {
+      <div class="text-center py-12">
+        <p class="text-gray-600">Loading quote details...</p>
+      </div>
+    } @else if (errorMessage()) {
+      <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+        {{ errorMessage() }}
+      </div>
+    } @else if (quote()) {
+      <!-- Quote Summary -->
+      <div class="bg-white shadow rounded-lg p-6 mb-6">
+        <h2 class="text-xl font-bold mb-4" style="color: #002855;">Quote Summary</h2>
+        <div class="grid grid-cols-4 gap-4 mb-4">
+          <div>
+            <p class="text-sm text-gray-600 font-semibold uppercase">Quote #</p>
+            <p class="font-medium">{{ quote()!.quoteNumber || quote()!.id }}</p>
+          </div>
+          <div>
+            <p class="text-sm text-gray-600 font-semibold uppercase">Type</p>
+            <p class="font-medium">{{ getQuoteTypeLabel(quote()!.quoteType) }}</p>
+          </div>
+          <div>
+            <p class="text-sm text-gray-600 font-semibold uppercase">Price</p>
+            <p class="font-bold text-blue-600">${{ (quote()!.quotedPrice ?? quote()!.totalPrice) | number:'1.2-2' }}</p>
+          </div>
+          <div>
+            <p class="text-sm text-gray-600 font-semibold uppercase">Expires</p>
+            <p class="font-medium">{{ quote()!.expiryDate }}</p>
+          </div>
+        </div>
+        <hr class="my-4" />
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <p class="text-sm text-gray-600 font-semibold uppercase">Origin Address</p>
+            <p class="font-medium">{{ quote()!.origin }}</p>
+          </div>
+          <div>
+            <p class="text-sm text-gray-600 font-semibold uppercase">Destination Address</p>
+            <p class="font-medium">{{ quote()!.destination }}</p>
+          </div>
+        </div>
+
+        <!-- Admin Price Breakdown (same as Quote Review) -->
+        @if (isAdminOrMarketingManager()) {
+          <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-6 mb-6">
+            <h3 class="font-semibold text-blue-900 mb-3">Price Breakdown</h3>
+            <div class="space-y-2 text-sm">
+              @if (quote()!.baseRate) {
+                <div class="flex justify-between">
+                  <span class="text-gray-700">Rail Base Rate:</span>
+                  <span class="font-medium">${{ quote()!.baseRate | number:'1.2-2' }}</span>
+                </div>
+              }
+              @if (quote()!.fuelSurcharge) {
+                <div class="flex justify-between">
+                  <span class="text-gray-700">Fuel Surcharge:</span>
+                  <span class="font-medium">${{ quote()!.fuelSurcharge | number:'1.2-2' }}</span>
+                </div>
+              }
+              @if (quote()!.pickupCost) {
+                <div class="flex justify-between">
+                  <span class="text-gray-700">Origin Pickup:</span>
+                  <span class="font-medium">${{ quote()!.pickupCost | number:'1.2-2' }}</span>
+                </div>
+              }
+              @if (quote()!.deliveryCost) {
+                <div class="flex justify-between">
+                  <span class="text-gray-700">Final Delivery:</span>
+                  <span class="font-medium">${{ quote()!.deliveryCost | number:'1.2-2' }}</span>
+                </div>
+              }
+              <div class="border-t border-blue-200 pt-2 mt-2 flex justify-between font-semibold text-blue-900">
+                <span>Total:</span>
+                <span>${{ (quote()!.totalPrice ?? quote()!.quotedPrice) | number:'1.0-0' }}</span>
+              </div>
+            </div>
+          </div>
+        }
+
+        <!-- Planned Route (moves) -->
+        <div class="space-y-4 mb-6 mt-4">
+          <h3 class="font-semibold text-gray-800 flex items-center gap-2">📍 Planned Route ({{ (quote()!.moves || []).length }} moves)</h3>
+          @for (move of (quote()!.moves || []); track move.id; let i = $index) {
+            <div class="border-l-4 border-blue-600 pl-4 py-2">
+              <div class="text-sm font-medium text-gray-700">Move {{ i + 1 }}</div>
+              <div class="text-sm text-gray-600">
+                <div>From: {{ move.origin.address }} ({{ move.origin.zip }})</div>
+                <div>To: {{ move.destination.address }} ({{ move.destination.zip }})</div>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Order Details Form -->
+      <form [formGroup]="form" (ngSubmit)="onSubmit()" class="bg-white shadow rounded-lg p-6">
+        <h2 class="text-xl font-bold mb-6" style="color: #002855;">Order Details</h2>
+
+        <!-- Appointment Section -->
+        <fieldset class="mb-8 pb-8 border-b">
+          <legend class="text-lg font-bold mb-4" style="color: #002855;">Appointment Times</legend>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <!-- Pickup Date -->
+            <div>
+              <label for="pickupDate" class="block text-sm font-semibold text-gray-700 mb-2">
+                Pickup Date <span class="text-red-500">*</span>
+              </label>
+              <input
+                id="pickupDate"
+                type="date"
+                formControlName="pickupAppointmentDate"
+                class="w-full border border-gray-300 rounded px-3 py-2"
+                required
+              />
+              @if (form.get('pickupAppointmentDate')?.hasError('required') && form.get('pickupAppointmentDate')?.touched) {
+                <p class="text-red-500 text-sm mt-1">Pickup date is required</p>
+              }
+            </div>
+
+            <!-- Pickup Start Time -->
+            <div>
+              <label for="pickupStartTime" class="block text-sm font-semibold text-gray-700 mb-2">
+                Pickup Start Time <span class="text-red-500">*</span>
+              </label>
+              <input
+                id="pickupStartTime"
+                type="time"
+                formControlName="pickupAppointmentStartTime"
+                class="w-full border border-gray-300 rounded px-3 py-2"
+                required
+              />
+              @if (form.get('pickupAppointmentStartTime')?.hasError('required') && form.get('pickupAppointmentStartTime')?.touched) {
+                <p class="text-red-500 text-sm mt-1">Pickup start time is required</p>
+              }
+            </div>
+
+            <!-- Pickup End Time -->
+            <div>
+              <label for="pickupEndTime" class="block text-sm font-semibold text-gray-700 mb-2">
+                Pickup End Time <span class="text-red-500">*</span>
+              </label>
+              <input
+                id="pickupEndTime"
+                type="time"
+                formControlName="pickupAppointmentEndTime"
+                class="w-full border border-gray-300 rounded px-3 py-2"
+                required
+              />
+              @if (form.get('pickupAppointmentEndTime')?.hasError('required') && form.get('pickupAppointmentEndTime')?.touched) {
+                <p class="text-red-500 text-sm mt-1">Pickup end time is required</p>
+              }
+              @if (form.get('pickupAppointmentEndTime')?.hasError('endBeforeStart') && form.get('pickupAppointmentEndTime')?.touched) {
+                <p class="text-red-500 text-sm mt-1">End time cannot be earlier than start time</p>
+              }
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Delivery Date (Optional) -->
+            <div>
+              <label for="deliveryDate" class="block text-sm font-semibold text-gray-700 mb-2">
+                Delivery Date (Optional)
+              </label>
+              <input
+                id="deliveryDate"
+                type="date"
+                formControlName="deliveryAppointmentDate"
+                class="w-full border border-gray-300 rounded px-3 py-2"
+              />
+            </div>
+
+            <!-- Delivery Start Time (Optional) -->
+            <div>
+              <label for="deliveryStartTime" class="block text-sm font-semibold text-gray-700 mb-2">
+                Delivery Start Time (Optional)
+              </label>
+              <input
+                id="deliveryStartTime"
+                type="time"
+                formControlName="deliveryAppointmentStartTime"
+                class="w-full border border-gray-300 rounded px-3 py-2"
+              />
+            </div>
+
+            <!-- Delivery End Time (Optional) -->
+            <div>
+              <label for="deliveryEndTime" class="block text-sm font-semibold text-gray-700 mb-2">
+                Delivery End Time (Optional)
+              </label>
+              <input
+                id="deliveryEndTime"
+                type="time"
+                formControlName="deliveryAppointmentEndTime"
+                class="w-full border border-gray-300 rounded px-3 py-2"
+              />
+              @if (form.get('deliveryAppointmentEndTime')?.hasError('endBeforeStart') && form.get('deliveryAppointmentEndTime')?.touched) {
+                <p class="text-red-500 text-sm mt-1">End time cannot be earlier than start time</p>
+              }
+            </div>
+          </div>
+        </fieldset>
+
+        <!-- Contact Information -->
+        <fieldset class="mb-8">
+          <legend class="text-lg font-bold mb-4" style="color: #002855;">Contact Information</legend>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <!-- Pickup Contact Name -->
+            <div>
+              <label for="pickupContactName" class="block text-sm font-semibold text-gray-700 mb-2">
+                Pickup Contact Name
+              </label>
+              <input
+                id="pickupContactName"
+                type="text"
+                formControlName="pickupContactName"
+                class="w-full border border-gray-300 rounded px-3 py-2"
+                placeholder="Name"
+              />
+            </div>
+
+            <!-- Pickup Contact Phone -->
+            <div>
+              <label for="pickupContactPhone" class="block text-sm font-semibold text-gray-700 mb-2">
+                Pickup Contact Phone
+              </label>
+              <input
+                id="pickupContactPhone"
+                type="tel"
+                formControlName="pickupContactPhone"
+                class="w-full border border-gray-300 rounded px-3 py-2"
+                placeholder="(XXX) XXX-XXXX"
+              />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Delivery Contact Name -->
+            <div>
+              <label for="deliveryContactName" class="block text-sm font-semibold text-gray-700 mb-2">
+                Delivery Contact Name
+              </label>
+              <input
+                id="deliveryContactName"
+                type="text"
+                formControlName="deliveryContactName"
+                class="w-full border border-gray-300 rounded px-3 py-2"
+                placeholder="Name"
+              />
+            </div>
+
+            <!-- Delivery Contact Phone -->
+            <div>
+              <label for="deliveryContactPhone" class="block text-sm font-semibold text-gray-700 mb-2">
+                Delivery Contact Phone
+              </label>
+              <input
+                id="deliveryContactPhone"
+                type="tel"
+                formControlName="deliveryContactPhone"
+                class="w-full border border-gray-300 rounded px-3 py-2"
+                placeholder="(XXX) XXX-XXXX"
+              />
+            </div>
+          </div>
+        </fieldset>
+
+        <!-- Action Buttons -->
+        <div class="flex gap-3 justify-end">
+          <button
+            type="button"
+            (click)="cancel()"
+            class="px-6 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium"
+            [disabled]="submitting()">
+            Cancel
+          </button>
+          <button
+            type="submit"
+            class="px-6 py-2 text-white rounded-lg font-medium"
+            style="background-color: #003DA5;"
+            [disabled]="submitting() || form.invalid"
+            [style.opacity]="submitting() || form.invalid ? '0.6' : '1'"
+            onmouseover="this.style.backgroundColor='#002855'"
+            onmouseout="this.style.backgroundColor='#003DA5'">
+            {{ submitting() ? 'Creating Order...' : 'Create Order' }}
+          </button>
+        </div>
+      </form>
+    }
+  </div>
+</div>

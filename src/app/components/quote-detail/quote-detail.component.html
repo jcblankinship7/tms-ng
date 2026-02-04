@@ -1,0 +1,199 @@
+<div class="min-h-screen bg-gray-50">
+  <!-- Header -->
+  <div class="bg-white shadow">
+    <div class="max-w-4xl mx-auto px-6 py-6 flex justify-between items-center">
+      <h1 class="text-3xl font-bold" style="color: #002855;">Quote Details</h1>
+      <button
+        (click)="goBack()"
+        class="px-4 py-2 text-gray-600 hover:text-gray-900 font-medium">
+        ← Back
+      </button>
+    </div>
+  </div>
+
+  <div class="max-w-4xl mx-auto p-6">
+    @if (loading()) {
+      <div class="text-center py-12">
+        <p class="text-gray-600">Loading quote details...</p>
+      </div>
+    } @else if (errorMessage()) {
+      <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+        {{ errorMessage() }}
+      </div>
+    } @else if (quote()) {
+      <div class="bg-white shadow rounded-lg p-8 mb-6">
+        <!-- Quote Header Info -->
+        <div class="grid grid-cols-3 gap-6 mb-8 pb-8 border-b">
+          <div>
+            <p class="text-sm text-gray-600 uppercase font-semibold">Quote Number</p>
+            <p class="text-xl font-bold">{{ quote()!.quoteNumber }}</p>
+          </div>
+          <div>
+            <p class="text-sm text-gray-600 uppercase font-semibold">Type</p>
+            <span
+              [class]="quote()!.quoteType === 'Spot'
+                ? 'bg-green-100 text-green-800'
+                : 'bg-purple-100 text-purple-800'"
+              class="px-3 py-1 text-sm rounded-full font-medium inline-block">
+              {{ quote()!.quoteType }}
+            </span>
+          </div>
+          <div>
+            <p class="text-sm text-gray-600 uppercase font-semibold">Status</p>
+            <span
+              [class]="getStatusColor(quote()!.status)"
+              class="px-3 py-1 text-sm rounded-full font-medium inline-block">
+              {{ quote()!.status }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Route Information -->
+        <div class="mb-8 pb-8 border-b">
+          <h2 class="text-lg font-bold mb-4" style="color: #002855;">Route</h2>
+          <div class="grid grid-cols-2 gap-8">
+            <div>
+              <p class="text-sm text-gray-600 uppercase font-semibold mb-2">Pickup</p>
+              <p class="text-lg font-medium">{{ quote()!.origin }}</p>
+              @if (quote()!.pickupAppointmentDate) {
+                <p class="text-sm text-gray-600 mt-2">
+                  {{ quote()!.pickupAppointmentDate }} @ {{ quote()!.pickupAppointmentTime }}
+                </p>
+              }
+            </div>
+            <div>
+              <p class="text-sm text-gray-600 uppercase font-semibold mb-2">Delivery</p>
+              <p class="text-lg font-medium">{{ quote()!.destination }}</p>
+              @if (quote()!.deliveryAppointmentDate) {
+                <p class="text-sm text-gray-600 mt-2">
+                  {{ quote()!.deliveryAppointmentDate }} @ {{ quote()!.deliveryAppointmentTime }}
+                </p>
+              }
+            </div>
+          </div>
+        </div>
+
+        <!-- Shipment Details -->
+        <div class="mb-8 pb-8 border-b">
+          <h2 class="text-lg font-bold mb-4" style="color: #002855;">Shipment Details</h2>
+          <div class="grid grid-cols-2 gap-6">
+            @if (quote()!.weight) {
+              <div>
+                <p class="text-sm text-gray-600 uppercase font-semibold">Weight</p>
+                <p class="text-lg font-medium">{{ quote()!.weight }} lbs</p>
+              </div>
+            }
+            @if (quote()!.shipmentDetails?.commodityType) {
+              <div>
+                <p class="text-sm text-gray-600 uppercase font-semibold">Commodity Type</p>
+                <p class="text-lg font-medium">{{ quote()!.shipmentDetails?.commodityType }}</p>
+              </div>
+            }
+            @if (quote()!.shipmentDetails?.pallets) {
+              <div>
+                <p class="text-sm text-gray-600 uppercase font-semibold">Pallets</p>
+                <p class="text-lg font-medium">{{ quote()!.shipmentDetails?.pallets }}</p>
+              </div>
+            }
+            @if (quote()!.specialHandling) {
+              <div class="col-span-2">
+                <p class="text-sm text-gray-600 uppercase font-semibold">Special Handling</p>
+                <p class="text-lg font-medium">{{ quote()!.specialHandling }}</p>
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Pricing -->
+        <div class="mb-8 pb-8 border-b">
+          <h2 class="text-lg font-bold mb-4" style="color: #002855;">Pricing</h2>
+          <div class="grid grid-cols-2 gap-6">
+            @if (quote()!.quotedPrice) {
+              <div>
+                <p class="text-sm text-gray-600 uppercase font-semibold">Quoted Price</p>
+                <p class="text-2xl font-bold text-blue-600">${{ quote()!.quotedPrice?.toFixed(2) }}</p>
+              </div>
+            }
+            @if (quote()!.acceptedPrice) {
+              <div>
+                <p class="text-sm text-gray-600 uppercase font-semibold">Accepted Price</p>
+                <p class="text-2xl font-bold text-green-600">${{ quote()!.acceptedPrice?.toFixed(2) }}</p>
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Dates -->
+        <div class="mb-8 pb-8 border-b">
+          <h2 class="text-lg font-bold mb-4" style="color: #002855;">Timeline</h2>
+          <div class="grid grid-cols-2 gap-6">
+            <div>
+              <p class="text-sm text-gray-600 uppercase font-semibold">Created</p>
+              <p class="text-lg font-medium">{{ quote()!.createdDate }}</p>
+            </div>
+            @if (quote()!.expiryDate) {
+              <div>
+                <p class="text-sm text-gray-600 uppercase font-semibold">Expires</p>
+                <p class="text-lg font-medium">{{ quote()!.expiryDate }}</p>
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Notes -->
+        @if (quote()!.notes) {
+          <div class="mb-8 pb-8 border-b">
+            <h2 class="text-lg font-bold mb-4" style="color: #002855;">Notes</h2>
+            <p class="text-gray-700">{{ quote()!.notes }}</p>
+          </div>
+        }
+
+        <!-- Contact Information -->
+        @if (quote()!.orderDetails) {
+          <div class="mb-8 pb-8 border-b">
+            <h2 class="text-lg font-bold mb-4" style="color: #002855;">Contact Information</h2>
+            <div class="grid grid-cols-2 gap-6">
+              @if (quote()!.orderDetails?.pickupContactName) {
+                <div>
+                  <p class="text-sm text-gray-600 uppercase font-semibold">Pickup Contact</p>
+                  <p class="text-lg font-medium">{{ quote()!.orderDetails?.pickupContactName }}</p>
+                  @if (quote()!.orderDetails?.pickupContactPhone) {
+                    <p class="text-sm text-gray-600">{{ quote()!.orderDetails?.pickupContactPhone }}</p>
+                  }
+                </div>
+              }
+              @if (quote()!.orderDetails?.deliveryContactName) {
+                <div>
+                  <p class="text-sm text-gray-600 uppercase font-semibold">Delivery Contact</p>
+                  <p class="text-lg font-medium">{{ quote()!.orderDetails?.deliveryContactName }}</p>
+                  @if (quote()!.orderDetails?.deliveryContactPhone) {
+                    <p class="text-sm text-gray-600">{{ quote()!.orderDetails?.deliveryContactPhone }}</p>
+                  }
+                </div>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- Actions (only for customers and appropriate quote status) -->
+        @if (isCustomer() && quote()!.status === 'Quoted') {
+          <div class="flex gap-3 justify-end">
+            <button
+              (click)="rejectQuote()"
+              class="px-6 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium">
+              Reject Quote
+            </button>
+            <button
+              (click)="acceptQuote()"
+              class="px-6 py-2 text-white rounded-lg font-medium"
+              style="background-color: #003DA5;"
+              onmouseover="this.style.backgroundColor='#002855'"
+              onmouseout="this.style.backgroundColor='#003DA5'">
+              Accept Quote
+            </button>
+          </div>
+        }
+      </div>
+    }
+  </div>
+</div>

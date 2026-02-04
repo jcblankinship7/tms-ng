@@ -1,0 +1,249 @@
+<div class="terminal-form-container">
+  <div class="form-header">
+    <h1>{{ isEditMode ? 'Edit Terminal' : 'Add New Terminal' }}</h1>
+  </div>
+
+  <div *ngIf="loading && isEditMode" class="loading">Loading terminal...</div>
+
+  <div *ngIf="error" class="error-message">{{ error }}</div>
+
+  <form [formGroup]="terminalForm" (ngSubmit)="onSubmit()" *ngIf="!loading || !isEditMode" class="terminal-form">
+    <div class="form-section">
+      <h2>Basic Information</h2>
+      
+      <div class="form-row">
+        <div class="form-group full-width">
+          <label for="name">Terminal Name *</label>
+          <input
+            id="name"
+            type="text"
+            formControlName="name"
+            class="form-control"
+            placeholder="Enter terminal name"
+          />
+          <span class="error-text" *ngIf="getFieldError('name')">{{ getFieldError('name') }}</span>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group full-width">
+          <label for="railroad">Railroad *</label>
+          <input
+            id="railroad"
+            type="text"
+            formControlName="railroad"
+            class="form-control"
+            placeholder="Enter railroad name (e.g., BNSF, Union Pacific)"
+          />
+          <span class="error-text" *ngIf="getFieldError('railroad')">{{ getFieldError('railroad') }}</span>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group full-width">
+          <label for="status">Status *</label>
+          <select id="status" formControlName="status" class="form-control">
+            <option [ngValue]="TerminalStatus.Active">Active</option>
+            <option [ngValue]="TerminalStatus.Inactive">Inactive</option>
+          </select>
+          <span class="error-text" *ngIf="getFieldError('status')">{{ getFieldError('status') }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h2>Address</h2>
+      
+      <div class="form-row">
+        <div class="form-group full-width">
+          <label for="address">Street Address *</label>
+          <input
+            id="address"
+            type="text"
+            formControlName="address"
+            class="form-control"
+            placeholder="Enter street address"
+          />
+          <span class="error-text" *ngIf="getFieldError('address')">{{ getFieldError('address') }}</span>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="city">City *</label>
+          <input
+            id="city"
+            type="text"
+            formControlName="city"
+            class="form-control"
+            placeholder="Enter city"
+          />
+          <span class="error-text" *ngIf="getFieldError('city')">{{ getFieldError('city') }}</span>
+        </div>
+
+        <div class="form-group">
+          <label for="state">State *</label>
+          <input
+            id="state"
+            type="text"
+            formControlName="state"
+            class="form-control"
+            placeholder="CA"
+            maxlength="2"
+          />
+          <span class="error-text" *ngIf="getFieldError('state')">{{ getFieldError('state') }}</span>
+        </div>
+
+        <div class="form-group">
+          <label for="zip">ZIP Code *</label>
+          <input
+            id="zip"
+            type="text"
+            formControlName="zip"
+            class="form-control"
+            placeholder="12345"
+          />
+          <span class="error-text" *ngIf="getFieldError('zip')">{{ getFieldError('zip') }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h2>Coordinates</h2>
+      <p class="help-text">Coordinates are set from the address and cannot be edited.</p>
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label for="latitude">Latitude *</label>
+          <input
+            id="latitude"
+            type="number"
+            step="0.000001"
+            formControlName="latitude"
+            class="form-control"
+            placeholder="e.g., 34.0522"
+            [disabled]="true"
+          />
+          <span class="help-text">-90 to 90</span>
+          <span class="error-text" *ngIf="getFieldError('latitude')">{{ getFieldError('latitude') }}</span>
+        </div>
+
+        <div class="form-group">
+          <label for="longitude">Longitude *</label>
+          <input
+            id="longitude"
+            type="number"
+            step="0.000001"
+            formControlName="longitude"
+            class="form-control"
+            placeholder="e.g., -118.2437"
+            [disabled]="true"
+          />
+          <span class="help-text">-180 to 180</span>
+          <span class="error-text" *ngIf="getFieldError('longitude')">{{ getFieldError('longitude') }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h2>Hours</h2>
+      <div class="form-row">
+        <div class="form-group full-width">
+          <label class="inline-flex items-center gap-2">
+            <input
+              type="checkbox"
+              formControlName="isTwentyFourSevenHours"
+              (change)="onTwentyFourSevenHoursToggle()"
+            />
+            24/7 hours
+          </label>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="mondayHours">Monday</label>
+          <input id="mondayHours" type="text" formControlName="mondayHours" class="form-control" placeholder="0000-2359" />
+        </div>
+        <div class="form-group">
+          <label for="tuesdayHours">Tuesday</label>
+          <input id="tuesdayHours" type="text" formControlName="tuesdayHours" class="form-control" placeholder="0000-2359" />
+        </div>
+        <div class="form-group">
+          <label for="wednesdayHours">Wednesday</label>
+          <input id="wednesdayHours" type="text" formControlName="wednesdayHours" class="form-control" placeholder="0000-2359" />
+        </div>
+        <div class="form-group">
+          <label for="thursdayHours">Thursday</label>
+          <input id="thursdayHours" type="text" formControlName="thursdayHours" class="form-control" placeholder="0000-2359" />
+        </div>
+        <div class="form-group">
+          <label for="fridayHours">Friday</label>
+          <input id="fridayHours" type="text" formControlName="fridayHours" class="form-control" placeholder="0000-2359" />
+        </div>
+        <div class="form-group">
+          <label for="saturdayHours">Saturday</label>
+          <input id="saturdayHours" type="text" formControlName="saturdayHours" class="form-control" placeholder="0000-2359" />
+        </div>
+        <div class="form-group">
+          <label for="sundayHours">Sunday</label>
+          <input id="sundayHours" type="text" formControlName="sundayHours" class="form-control" placeholder="0000-2359" />
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h2>Flip (Gate) Hours</h2>
+      <div class="form-row">
+        <div class="form-group full-width">
+          <label class="inline-flex items-center gap-2">
+            <input
+              type="checkbox"
+              formControlName="isTwentyFourSevenFlipHours"
+              (change)="onTwentyFourSevenFlipHoursToggle()"
+            />
+            24/7 flip hours
+          </label>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="mondayFlipHours">Monday</label>
+          <input id="mondayFlipHours" type="text" formControlName="mondayFlipHours" class="form-control" placeholder="0000-2359" />
+        </div>
+        <div class="form-group">
+          <label for="tuesdayFlipHours">Tuesday</label>
+          <input id="tuesdayFlipHours" type="text" formControlName="tuesdayFlipHours" class="form-control" placeholder="0000-2359" />
+        </div>
+        <div class="form-group">
+          <label for="wednesdayFlipHours">Wednesday</label>
+          <input id="wednesdayFlipHours" type="text" formControlName="wednesdayFlipHours" class="form-control" placeholder="0000-2359" />
+        </div>
+        <div class="form-group">
+          <label for="thursdayFlipHours">Thursday</label>
+          <input id="thursdayFlipHours" type="text" formControlName="thursdayFlipHours" class="form-control" placeholder="0000-2359" />
+        </div>
+        <div class="form-group">
+          <label for="fridayFlipHours">Friday</label>
+          <input id="fridayFlipHours" type="text" formControlName="fridayFlipHours" class="form-control" placeholder="0000-2359" />
+        </div>
+        <div class="form-group">
+          <label for="saturdayFlipHours">Saturday</label>
+          <input id="saturdayFlipHours" type="text" formControlName="saturdayFlipHours" class="form-control" placeholder="0000-2359" />
+        </div>
+        <div class="form-group">
+          <label for="sundayFlipHours">Sunday</label>
+          <input id="sundayFlipHours" type="text" formControlName="sundayFlipHours" class="form-control" placeholder="0000-2359" />
+        </div>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button type="button" (click)="cancel()" class="btn btn-secondary" [disabled]="loading">
+        Cancel
+      </button>
+      <button type="submit" class="btn btn-primary" [disabled]="loading || terminalForm.invalid">
+        {{ loading ? 'Saving...' : (isEditMode ? 'Update Terminal' : 'Create Terminal') }}
+      </button>
+    </div>
+  </form>
+</div>

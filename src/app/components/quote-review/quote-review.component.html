@@ -5,43 +5,103 @@
         ← Back
       </button>
       <h2 class="text-2xl font-bold text-gray-800">Quote Details</h2>
-    </div>
+      @if (currentQuote.status === 'Draft') {
 
+      }
+    </div>
     <div class="bg-white rounded-lg shadow p-6 max-w-4xl">
+      @if (errorMessage()) {
+        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          {{ errorMessage() }}
+        </div>
+      }
+      @if (!isCustomerPersona()) {
+        <div class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-4">
+          Only customers can create orders. Please log in as a customer or contact your broker.
+        </div>
+      }
       <div class="mb-6">
+        <div class="text-sm text-gray-600 font-semibold uppercase">Quote #</div>
+        <div class="text-lg font-medium mb-1">{{ currentQuote.quoteNumber || currentQuote.id }}</div>
         <div class="text-3xl font-bold text-gray-900 mb-2">
-          ${{ currentQuote.price }}
+          ${{ (currentQuote.quotedPrice ?? currentQuote.totalPrice) | number:'1.0-0' }}
         </div>
         <div class="text-sm text-gray-600">Total Quote Price</div>
       </div>
 
-      <div class="space-y-4 mb-6">
-        <h3 class="font-semibold text-gray-800 flex items-center gap-2">
-          📍 Planned Route ({{ currentQuote.moves.length }} moves)
-        </h3>
-        @for (move of currentQuote.moves; track move.id; let i = $index) {
-          <div class="border-l-4 border-blue-600 pl-4 py-2">
-            <div class="text-sm font-medium text-gray-700">Move {{ i + 1 }}</div>
-            <div class="text-sm text-gray-600">
-              <div>From: {{ move.origin.address }} ({{ move.origin.zip }})</div>
-              <div>To: {{ move.destination.address }} ({{ move.destination.zip }})</div>
+      @if (isAdminOrMarketingManager()) {
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+          <h3 class="font-semibold text-blue-900 mb-3">Price Breakdown</h3>
+          <div class="space-y-2 text-sm">
+            @if (currentQuote.baseRate) {
+              <div class="flex justify-between">
+                <span class="text-gray-700">Rail Base Rate:</span>
+                <span class="font-medium">${{ currentQuote.baseRate | number:'1.2-2' }}</span>
+              </div>
+            }
+            @if (currentQuote.fuelSurcharge) {
+              <div class="flex justify-between">
+                <span class="text-gray-700">Fuel Surcharge:</span>
+                <span class="font-medium">${{ currentQuote.fuelSurcharge | number:'1.2-2' }}</span>
+              </div>
+            }
+            @if (currentQuote.pickupCost) {
+              <div class="flex justify-between">
+                <span class="text-gray-700">Origin Pickup:</span>
+                <span class="font-medium">${{ currentQuote.pickupCost | number:'1.2-2' }}</span>
+              </div>
+            }
+            @if (currentQuote.deliveryCost) {
+              <div class="flex justify-between">
+                <span class="text-gray-700">Final Delivery:</span>
+                <span class="font-medium">${{ currentQuote.deliveryCost | number:'1.2-2' }}</span>
+              </div>
+            }
+            <div class="border-t border-blue-200 pt-2 mt-2 flex justify-between font-semibold text-blue-900">
+              <span>Total:</span>
+              <span>${{ currentQuote.totalPrice | number:'1.0-0' }}</span>
             </div>
           </div>
+        </div>
+      }
+
+      <div class="space-y-4 mb-6">
+        <h3 class="font-semibold text-gray-800 flex items-center gap-2">
+          📍 Planned Route ({{ currentQuote.moves?.length ?? 0 }} moves)
+        </h3>
+        @if (currentQuote.moves && currentQuote.moves.length > 0) {
+          @for (move of currentQuote.moves; track move.id; let i = $index) {
+            <div class="border-l-4 border-blue-600 pl-4 py-2">
+              <div class="text-sm font-medium text-gray-700">Move {{ i + 1 }}</div>
+              <div class="text-sm text-gray-600">
+                <div>From: {{ move.origin?.address || 'Unknown' }} ({{ move.origin?.zip || 'N/A' }})</div>
+                <div>To: {{ move.destination?.address || 'Unknown' }} ({{ move.destination?.zip || 'N/A' }})</div>
+              </div>
+            </div>
+          }
+        } @else {
+          <div class="text-sm text-gray-600">No planned moves available for this quote.</div>
         }
       </div>
 
       <div class="flex gap-4">
         <button
           (click)="acceptQuote()"
-          [disabled]="loading()"
+          [disabled]="!canAcceptQuote()"
           class="flex-1 bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 disabled:bg-gray-400 flex items-center justify-center gap-2">
-          ✓ Accept Quote & Create Order
+          ✓ Save Quote & Create Order
         </button>
         <button
-          (click)="rejectQuote()"
+          *ngIf="isCustomerPersona()"
+          (click)="saveAsDraft()"
           [disabled]="loading()"
-          class="flex-1 bg-red-600 text-white py-3 rounded-lg hover:bg-red-700 disabled:bg-gray-400 flex items-center justify-center gap-2">
-          ✗ Reject Quote
+          class="flex-1 bg-gray-200 text-gray-800 py-3 rounded-lg hover:bg-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+          💾 Save as Draft
+        </button>
+        <button
+          (click)="goBack()"
+          class="flex-1 border border-gray-300 text-gray-800 py-3 rounded-lg hover:bg-gray-50 flex items-center justify-center gap-2">
+          ← Cancel
         </button>
       </div>
     </div>

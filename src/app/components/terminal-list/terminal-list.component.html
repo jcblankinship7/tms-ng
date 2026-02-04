@@ -1,0 +1,159 @@
+<div class="terminal-list-container">
+  <div class="header">
+    <h1>Terminals</h1>
+    <a routerLink="/admin/terminals/new" class="btn btn-primary">
+      <span class="icon">+</span>
+      Add Terminal
+    </a>
+  </div>
+
+  <div class="filters">
+    <div class="filter-group">
+      <input
+        type="text"
+        [(ngModel)]="searchTerm"
+        placeholder="Search by name, city, state, or railroad..."
+        class="search-input"
+        (keyup.enter)="applyFilters()"
+      />
+    </div>
+
+    <div class="filter-group">
+      <select title="Selected Railroad" [(ngModel)]="selectedRailroad" class="filter-select">
+        <option value="">All Railroads</option>
+        <option *ngFor="let railroad of railroads" [value]="railroad">
+          {{ railroad }}
+        </option>
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <select title="Selected Status" [(ngModel)]="selectedStatus" class="filter-select">
+        <option [ngValue]="null">All Statuses</option>
+        <option [ngValue]="TerminalStatus.Active">Active</option>
+        <option [ngValue]="TerminalStatus.Inactive">Inactive</option>
+      </select>
+    </div>
+
+    <div class="filter-actions">
+      <button (click)="applyFilters()" class="btn btn-secondary">Apply Filters</button>
+      <button (click)="clearFilters()" class="btn btn-link">Clear</button>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="loading">Loading terminals...</div>
+
+  <div *ngIf="error" class="error-message">{{ error }}</div>
+
+  <div *ngIf="!loading && filteredTerminals.length === 0" class="no-data">
+    No terminals found.
+  </div>
+
+  <div *ngIf="!loading && filteredTerminals.length > 0" class="table-container">
+    <table class="terminals-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Location</th>
+          <th>Railroad</th>
+          <th>Coordinates</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let terminal of filteredTerminals">
+          <td class="terminal-name">{{ terminal.name }}</td>
+          <td>
+            <div>{{ terminal.address }}</div>
+            <div class="location-detail">{{ terminal.city }}, {{ terminal.state }} {{ terminal.zip }}</div>
+          </td>
+          <td>{{ terminal.railroad }}</td>
+          <td class="coordinates">
+            <div>{{ terminal.latitude | number:'1.4-4' }}, {{ terminal.longitude | number:'1.4-4' }}</div>
+          </td>
+          <td>
+            <span [class]="'status-badge ' + getStatusClass(terminal.status)">
+              {{ getStatusLabel(terminal.status) }}
+            </span>
+          </td>
+          <td class="actions text-sm font-medium">
+            <button (click)="showDetails(terminal)" class="text-green-600 hover:text-green-800 mr-3">
+              Details
+            </button>
+            <a [routerLink]="['/admin/terminals/edit', terminal.id]" class="text-blue-600 hover:text-blue-900 mr-3">
+              Edit
+            </a>
+            <button (click)="deleteTerminal(terminal)" class="text-red-600 hover:text-red-900">
+              Delete
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  @if (selectedTerminal) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm">
+      <div class="bg-white rounded-xl shadow-2xl p-6 max-w-lg w-full border border-gray-200">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-xl font-semibold text-gray-900">Terminal Details</h2>
+          <button (click)="closeDetails()" class="text-gray-500 hover:text-gray-700">✕</button>
+        </div>
+        <div class="space-y-3 text-sm text-gray-700">
+          <div>
+            <div class="font-semibold text-gray-900">{{ selectedTerminal.name }}</div>
+            <div>{{ selectedTerminal.railroad }}</div>
+          </div>
+          <div>
+            <div class="font-semibold text-gray-900">Address</div>
+            <div>{{ selectedTerminal.address }}</div>
+            <div>{{ selectedTerminal.city }}, {{ selectedTerminal.state }} {{ selectedTerminal.zip }}</div>
+          </div>
+          <div>
+            <div class="font-semibold text-gray-900">Coordinates</div>
+            <div>{{ selectedTerminal.latitude | number:'1.4-4' }}, {{ selectedTerminal.longitude | number:'1.4-4' }}</div>
+          </div>
+          <div>
+            <div class="font-semibold text-gray-900">Status</div>
+            <span [class]="'status-badge ' + getStatusClass(selectedTerminal.status)">
+              {{ getStatusLabel(selectedTerminal.status) }}
+            </span>
+          </div>
+          <div>
+            <div class="font-semibold text-gray-900">Hours</div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
+              <div>
+                <div class="text-gray-600 font-medium">Operating Hours</div>
+                <ul class="mt-1 space-y-1">
+                  <li>Mon: {{ selectedTerminal.mondayHours || 'N/A' }}</li>
+                  <li>Tue: {{ selectedTerminal.tuesdayHours || 'N/A' }}</li>
+                  <li>Wed: {{ selectedTerminal.wednesdayHours || 'N/A' }}</li>
+                  <li>Thu: {{ selectedTerminal.thursdayHours || 'N/A' }}</li>
+                  <li>Fri: {{ selectedTerminal.fridayHours || 'N/A' }}</li>
+                  <li>Sat: {{ selectedTerminal.saturdayHours || 'N/A' }}</li>
+                  <li>Sun: {{ selectedTerminal.sundayHours || 'N/A' }}</li>
+                </ul>
+              </div>
+              <div>
+                <div class="text-gray-600 font-medium">Flip (Gate) Hours</div>
+                <ul class="mt-1 space-y-1">
+                  <li>Mon: {{ selectedTerminal.mondayFlipHours || 'N/A' }}</li>
+                  <li>Tue: {{ selectedTerminal.tuesdayFlipHours || 'N/A' }}</li>
+                  <li>Wed: {{ selectedTerminal.wednesdayFlipHours || 'N/A' }}</li>
+                  <li>Thu: {{ selectedTerminal.thursdayFlipHours || 'N/A' }}</li>
+                  <li>Fri: {{ selectedTerminal.fridayFlipHours || 'N/A' }}</li>
+                  <li>Sat: {{ selectedTerminal.saturdayFlipHours || 'N/A' }}</li>
+                  <li>Sun: {{ selectedTerminal.sundayFlipHours || 'N/A' }}</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="flex justify-end mt-6">
+          <button (click)="closeDetails()" class="px-4 py-2 rounded-lg bg-gray-100 text-gray-800 hover:bg-gray-200">Close</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

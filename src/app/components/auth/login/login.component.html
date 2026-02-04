@@ -1,0 +1,98 @@
+<section class="min-h-screen flex items-center justify-center p-4" style="background: linear-gradient(135deg, #F8F8F8 0%, #E8E8E8 100%);">
+  <div class="w-full max-w-md bg-white rounded-lg shadow-2xl p-10 border-t-4" style="border-top-color: #60a5fa;">
+    <div class="text-center mb-8">
+      <div class="text-5xl font-bold mb-4">
+        <span style="color: #002855;">Freight</span><span style="color: #60a5fa;">Flow</span>
+        <div class="text-2xl font-normal" style="color: #53565A;">TMS</div>
+      </div>
+      <div class="text-xs uppercase tracking-widest font-bold mb-4" style="color: #60a5fa;">Ship Smarter, Not Harder</div>
+      <h1 class="text-2xl font-bold" style="color: #002855;">Sign in to your account</h1>
+      <p class="text-gray-600 mt-2">Access your transportation management system</p>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="space-y-6">
+      <!-- Email/Username -->
+      <div>
+        <label for="emailOrUsername" class="block text-xs font-bold uppercase tracking-wider mb-2" style="color: #53565A;">
+          Email or Username
+        </label>
+        <input
+          id="emailOrUsername"
+          type="text"
+          formControlName="emailOrUsername"
+          placeholder="Enter email or username"
+          class="w-full px-4 py-3 border-2 rounded transition-all"
+          style="border-color: #D0D0CE;"
+          onfocus="this.style.borderColor='#003DA5'; this.style.boxShadow='0 0 0 3px rgba(0,61,165,0.1)'"
+          onblur="this.style.borderColor='#D0D0CE'; this.style.boxShadow='none'"
+        />
+        @if (form.get('emailOrUsername')?.invalid && form.get('emailOrUsername')?.touched) {
+          <p class="text-red-600 text-sm mt-1 font-medium">Email or username is required</p>
+        }
+      </div>
+
+      <!-- Password -->
+      <div>
+        <label for="password" class="block text-xs font-bold uppercase tracking-wider mb-2" style="color: #53565A;">
+          Password
+        </label>
+        <input
+          id="password"
+          type="password"
+          formControlName="password"
+          placeholder="Enter password"
+          class="w-full px-4 py-3 border-2 rounded transition-all"
+          style="border-color: #D0D0CE;"
+          onfocus="this.style.borderColor='#003DA5'; this.style.boxShadow='0 0 0 3px rgba(0,61,165,0.1)'"
+          onblur="this.style.borderColor='#D0D0CE'; this.style.boxShadow='none'"
+        />
+        @if (form.get('password')?.invalid && form.get('password')?.touched) {
+          <p class="text-red-600 text-sm mt-1 font-medium">Password is required (min. 6 characters)</p>
+        }
+      </div>
+
+      <!-- Error Message -->
+      @if (errorMessage) {
+        <div class="bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded-md">
+          <p class="font-medium">{{ errorMessage }}</p>
+        </div>
+      }
+
+      <!-- Loading State -->
+      @if (loading) {
+        <div class="text-center">
+          <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        </div>
+      }
+
+      <!-- Login Button -->
+      <button
+        type="submit"
+        [disabled]="form.invalid || loading"
+        class="w-full font-bold py-3 px-4 rounded transition-all duration-200 shadow-md uppercase tracking-wider text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+        style="background-color: #003DA5; color: white;"
+        onmouseover="if(!this.disabled) this.style.backgroundColor='#002855'"
+        onmouseout="if(!this.disabled) this.style.backgroundColor='#003DA5'"
+      >
+        {{ loading ? 'SIGNING IN...' : 'SIGN IN TO FREIGHTFLOW' }}
+      </button>
+    </form>
+
+    <!-- Links -->
+    <div class="mt-8 space-y-3 text-center text-sm border-t pt-6" style="border-color: #D0D0CE;">
+      <p>
+        <a routerLink="/forgot-password" class="font-bold transition-colors uppercase tracking-wider text-xs" style="color: #003DA5;"
+           onmouseover="this.style.color='#002855'" onmouseout="this.style.color='#003DA5'">
+          Forgot password?
+        </a>
+      </p>
+      <p style="color: #53565A;">
+        Don't have an account?
+        <a routerLink="/register" class="font-bold transition-colors" style="color: #003DA5;"
+           onmouseover="this.style.color='#002855'" onmouseout="this.style.color='#003DA5'">
+          Register here
+        </a>
+      </p>
+    </div>
+  </div>
+</section>

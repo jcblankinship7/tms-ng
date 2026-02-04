@@ -1,0 +1,25 @@
+/* Move Detail Component Styles */
+
+:host {
+  display: block;
+}
+
+.bg-white {
+  border: 1px solid #E5E7EB;
+}
+
+.shadow-lg {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.rounded-lg {
+  border-radius: 8px;
+}
+
+.space-y-4 > * + * {
+  margin-top: 1rem;
+}
+
+.border-b {
+  border-bottom: 1px solid #E5E7EB;
+}

@@ -16,6 +16,7 @@ export class OrderService {
       moves: [
         {
           id: 'MOV-001',
+          orderNumber: 'ORD-001',
           moveOrder: 1,
           moveType: MoveType.ORIGIN_PICKUP,
           origin: { zip: '10001', address: '123 Main St, New York, NY' },
@@ -23,6 +24,7 @@ export class OrderService {
         },
         {
           id: 'MOV-002',
+          orderNumber: 'ORD-001',
           moveOrder: 2,
           moveType: MoveType.RAIL_MOVE,
           origin: { zip: '10001', address: 'Northeast Terminal' },
@@ -30,6 +32,7 @@ export class OrderService {
         },
         {
           id: 'MOV-003',
+          orderNumber: 'ORD-001',
           moveOrder: 3,
           moveType: MoveType.FINAL_DELIVERY,
           origin: { zip: '30301', address: 'Southeast Terminal' },
@@ -46,6 +49,7 @@ export class OrderService {
       moves: [
         {
           id: 'MOV-004',
+          orderNumber: 'ORD-002',
           moveOrder: 1,
           moveType: MoveType.ORIGIN_PICKUP,
           origin: { zip: '60601', address: '789 State St, Chicago, IL' },
@@ -53,6 +57,7 @@ export class OrderService {
         },
         {
           id: 'MOV-005',
+          orderNumber: 'ORD-002',
           moveOrder: 2,
           moveType: MoveType.RAIL_MOVE,
           origin: { zip: '60601', address: 'Midwest Terminal' },
@@ -60,6 +65,7 @@ export class OrderService {
         },
         {
           id: 'MOV-006',
+          orderNumber: 'ORD-002',
           moveOrder: 3,
           moveType: MoveType.FINAL_DELIVERY,
           origin: { zip: '75201', address: 'Southwest Terminal' },
@@ -71,8 +77,11 @@ export class OrderService {
 
   orders = signal<Order[]>(this.mockOrders);
 
-  getOrders(customerId: string): Observable<Order[]> {
-    return of(this.mockOrders.filter(o => o.customerId === customerId)).pipe(delay(300));
+  getOrders(customerId?: string): Observable<Order[]> {
+    const filtered = customerId 
+      ? this.mockOrders.filter(o => o.customerId === customerId)
+      : this.mockOrders;
+    return of(filtered).pipe(delay(300));
   }
 
   getOrderById(orderId: string): Observable<Order | undefined> {

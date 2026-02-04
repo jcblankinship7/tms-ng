@@ -1,0 +1,17 @@
+
+> tms-app@0.0.0 start
+> ng serve
+
+C:\workspaces\tms-workspace\tms-ng\node_modules\rxjs\dist\cjs\internal\util\reportUnhandledError.js:13
+            throw err;
+            ^
+
+Error: Port 4200 is already in use. Use '--port' to specify a different port.
+    at createInUseError (C:\workspaces\tms-workspace\tms-ng\node_modules\@angular\build\src\utils\check-port.js:51:12)
+    at Server.<anonymous> (C:\workspaces\tms-workspace\tms-ng\node_modules\@angular\build\src\utils\check-port.js:68:24)
+    at Object.onceWrapper (node:events:623:26)
+    at Server.emit (node:events:508:28)
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:89:21)
+
+Node.js v24.12.0

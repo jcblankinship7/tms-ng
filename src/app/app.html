@@ -1,13 +1,114 @@
-<div class="min-h-screen bg-gray-50">
-  <header class="bg-blue-600 text-white p-4 shadow-lg">
-    <div class="max-w-7xl mx-auto flex items-center justify-between">
-      <div class="flex items-center gap-2">
-        <h1 class="text-2xl font-bold">Transportation Management System</h1>
+<div class="min-h-screen app-shell">
+  @let user = (currentUser$ | async);
+
+  <!-- Top Header -->
+  <header class="app-header text-white shadow-xl">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        <div class="text-4xl font-bold tracking-tight">
+          <span class="text-white">Freight</span><span class="app-logo-flow">Flow</span>
+          <span class="text-white text-2xl ml-2 font-normal">TMS</span>
+        </div>
+        <div class="hidden md:block text-xs uppercase tracking-widest"
+          class="app-tagline hidden md:block text-xs uppercase tracking-widest">
+          Ship Smarter, Not Harder
+        </div>
       </div>
-      <div class="text-sm">Customer: CUST-001</div>
+      <div class="flex items-center gap-4">
+        @if (user) {
+        <div class="text-sm text-right cursor-pointer flex flex-col items-end" (click)="profileModal.openModal()" title="View Profile">
+          <div class="font-bold">{{ user.email }}</div>
+          @let persona = (persona$ | async);
+          @if (persona) {
+          <div class="text-xs uppercase tracking-wider app-persona">{{ persona }}</div>
+          }
+          @let activeCtx = (activeCustomer$ | async);
+          @if (activeCtx && activeCtx.customerName) {
+            <div class="text-xs text-white/90 mt-1 active-customer">Active: <span class="font-semibold">{{ activeCtx.customerName }}</span></div>
+          }
+        </div> 
+        <button type="button" (click)="logout()"
+          class="header-btn">
+          Logout
+        </button>
+        } @else {
+        <div class="flex items-center gap-2">
+          <button type="button" (click)="navigateToLogin()"
+            class="header-btn">
+            Login to FreightFlow
+          </button>
+          <a routerLink="/register" class="app-register-link font-medium underline text-sm ml-2">
+            Register
+          </a>
+        </div>
+        }
+      </div>
     </div>
   </header>
+
+  <!-- Navigation Bar -->
+  @if (user) {
+  <nav class="app-header app-nav text-white shadow-xl">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="flex items-center space-x-8 h-16">
+        <a routerLink="/dashboard" 
+          routerLinkActive="nav-active"
+          [routerLinkActiveOptions]="{ exact: true }"
+          class="nav-link font-bold uppercase tracking-wider text-sm transition-all duration-200 cursor-pointer py-4 px-2 border-b-4 border-transparent">
+          HOME
+        </a>
+        <a [routerLink]="getOrdersRoute()"
+          routerLinkActive="nav-active"
+          class="nav-link font-bold uppercase tracking-wider text-sm transition-all duration-200 cursor-pointer py-4 px-2 border-b-4 border-transparent">
+          ORDERS
+        </a>
+        <a [routerLink]="getQuotesRoute()"
+          routerLinkActive="nav-active"
+          class="nav-link font-bold uppercase tracking-wider text-sm transition-all duration-200 cursor-pointer py-4 px-2 border-b-4 border-transparent">
+          QUOTES
+        </a>
+        @if (isAdmin()) {
+        <a routerLink="/admin/customers"
+          routerLinkActive="nav-active"
+          class="nav-link font-bold uppercase tracking-wider text-sm transition-all duration-200 cursor-pointer py-4 px-2 border-b-4 border-transparent">
+          CUSTOMERS
+        </a>
+        <a routerLink="/admin/users"
+          routerLinkActive="nav-active"
+          class="nav-link font-bold uppercase tracking-wider text-sm transition-all duration-200 cursor-pointer py-4 px-2 border-b-4 border-transparent">
+          USERS
+        </a>
+        <a routerLink="/admin/terminals"
+          routerLinkActive="nav-active"
+          class="nav-link font-bold uppercase tracking-wider text-sm transition-all duration-200 cursor-pointer py-4 px-2 border-b-4 border-transparent">
+          TERMINALS
+        </a>
+        <a routerLink="/admin/codes"
+          routerLinkActive="nav-active"
+          class="nav-link font-bold uppercase tracking-wider text-sm transition-all duration-200 cursor-pointer py-4 px-2 border-b-4 border-transparent">
+          CODES
+        </a>
+        <a routerLink="/admin/train-schedules"
+          routerLinkActive="nav-active"
+          class="nav-link font-bold uppercase tracking-wider text-sm transition-all duration-200 cursor-pointer py-4 px-2 border-b-4 border-transparent">
+          TRAIN SCHEDULES
+        </a>
+        <a routerLink="/admin/rail-rates"
+          routerLinkActive="nav-active"
+          class="nav-link font-bold uppercase tracking-wider text-sm transition-all duration-200 cursor-pointer py-4 px-2 border-b-4 border-transparent">
+          RAIL RATES
+        </a>
+        }
+      </div>
+    </div>
+  </nav>
+  }
+
   <main class="max-w-7xl mx-auto p-6">
     <router-outlet />
   </main>
+
+  <!-- Profile Modal -->
+  <app-toast></app-toast>
+  <app-profile-modal #profileModal></app-profile-modal> 
 </div>

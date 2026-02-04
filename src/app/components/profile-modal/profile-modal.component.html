@@ -1,0 +1,162 @@
+<div class="fixed inset-0 z-50 overflow-y-auto" [class.hidden]="!isOpen()">
+  <!-- Backdrop -->
+  <div class="fixed inset-0 bg-black/50" (click)="closeModal()"></div>
+
+  <!-- Modal -->
+  <div class="flex items-center justify-center min-h-screen p-4">
+    <div class="relative bg-white rounded-lg shadow-lg max-w-md w-full">
+      <!-- Header -->
+      <div class="flex items-center justify-between p-6 border-b">
+        <h2 class="text-xl font-semibold text-gray-900">My Profile</h2>
+        <button
+          (click)="closeModal()"
+          class="text-gray-400 hover:text-gray-600 transition"
+        >
+          ✕
+        </button>
+      </div>
+
+      <!-- Content -->
+      <div class="p-6 space-y-6">
+        @if (bannerMessage()) {
+          <div class="profile-banner flex items-center justify-between p-3 rounded">
+            <div class="flex items-center gap-3">
+              <span class="banner-icon">✓</span>
+              <span class="banner-text">{{ bannerMessage() }}</span>
+            </div>
+            <button (click)="clearBanner()" class="text-sm font-medium text-gray-700 hover:text-gray-900">✕</button>
+          </div>
+        }
+
+        @if (loading()) {
+          <div class="text-sm text-gray-500">Loading profile details...</div>
+        }
+
+        @if (errorMessage()) {
+          <div class="text-sm text-red-600">{{ errorMessage() }}</div>
+        }
+
+        <!-- User Information -->
+        @if (currentUser()) {
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Name</label>
+              <p class="text-gray-900">{{ currentUser()!.firstName }} {{ currentUser()!.lastName }}</p>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <p class="text-gray-900">{{ currentUser()!.email }}</p>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+              <p class="text-gray-900">{{ currentUser()!.userName }}</p>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Role</label>
+              <p class="text-gray-900">{{ getPersonaLabel(currentUser()!.persona) }}</p>
+            </div>
+
+            @if (currentUser()!.address) {
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                <p class="text-gray-900">{{ currentUser()!.address }}</p>
+              </div>
+            }
+
+            @if (currentUser()!.city || currentUser()!.state) {
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                <p class="text-gray-900">
+                  {{ currentUser()!.city }}
+                  @if (currentUser()!.state) {
+                    {{ currentUser()!.state }}
+                  }
+                </p>
+              </div>
+            }
+          </div>
+        }
+        @else if (!loading() && !errorMessage()) {
+          <div class="text-sm text-gray-500">No profile details available.</div>
+        }
+
+        <!-- Customer Switcher (for Customer persona with multiple customers) -->
+        @if (
+          currentUser() &&
+          currentUser()!.persona === UserPersona.Customer &&
+          associatedCustomers().length > 1
+        ) {
+          <div class="border-t pt-6">
+            <label class="block text-sm font-medium text-gray-700 mb-3">
+              Active Customer
+            </label>
+            <div class="space-y-2">
+              @for (customer of associatedCustomers(); track customer.id) {
+                <button
+                  (click)="switchCustomer(customer.id)"
+                  [class.ring-2]="selectedCustomerId() === customer.id"
+                  [class.ring-blue-500]="selectedCustomerId() === customer.id"
+                  class="w-full text-left p-3 border rounded-lg hover:bg-gray-50 transition"
+                >
+                  <p class="font-medium text-gray-900">{{ customer.name }}</p>
+                  <p class="text-sm text-gray-500">{{ customer.patronCode }}</p>
+                </button>
+              }
+            </div>
+            @if (selectedCustomerId()) {
+              <div class="flex items-center gap-3">
+                <p class="text-xs text-green-600 mt-2">
+                  ✓ Active customer for quotes and orders
+                </p>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- Single customer display -->
+        @if (
+          currentUser() &&
+          currentUser()!.persona === UserPersona.Customer &&
+          associatedCustomers().length === 1
+        ) {
+          <div class="border-t pt-6">
+            <label class="block text-sm font-medium text-gray-700 mb-3">
+              Associated Customer
+            </label>
+            <div class="p-3 border rounded-lg bg-gray-50">
+              <p class="font-medium text-gray-900">{{ associatedCustomers()[0].name }}</p>
+              <p class="text-sm text-gray-500">{{ associatedCustomers()[0].patronCode }}</p>
+            </div>
+          </div>
+        }
+
+        @if (
+          currentUser() &&
+          currentUser()!.persona === UserPersona.Customer &&
+          associatedCustomers().length === 0 &&
+          !loading()
+        ) {
+          <div class="border-t pt-6">
+            <label class="block text-sm font-medium text-gray-700 mb-3">
+              Associated Customers
+            </label>
+            <div class="text-sm text-gray-500">No associated customers found.</div>
+          </div>
+        }
+      </div>
+
+      <!-- Footer -->
+      <div class="p-6 border-t bg-gray-50 flex justify-end">
+        <button
+          (click)="closeModal()"
+          class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

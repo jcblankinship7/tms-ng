@@ -95,6 +95,7 @@ export class OrderDetailComponent implements OnInit {
 
     const newMove: Move = {
       id: this.generateId(),
+      orderNumber: currentOrder.id,
       moveOrder: afterIndex + 2,
       moveType: MoveType.EXTRA_PICKUP, // default type, adjust if needed
       origin: { ...previousMove.destination }, // initially empty
@@ -170,17 +171,36 @@ export class OrderDetailComponent implements OnInit {
   }
 
   saveOrder(): void {
+    const currentOrder = this.order();
+    if (!currentOrder) return;
+
     if (this.hasIncompleteMoves()) {
       this.errorMessage.set('Please complete all moves before saving');
       setTimeout(() => this.errorMessage.set(''), 3000);
       return;
     }
+    
     this.saving.set(true);
-    setTimeout(() => {
-      this.saving.set(false);
-      this.successMessage.set('Order saved successfully!');
-      setTimeout(() => this.successMessage.set(''), 3000);
-    }, 1000);
+    this.errorMessage.set('');
+    
+    this.orderService.updateOrder(currentOrder.id, currentOrder.moves).subscribe({
+      next: (updatedOrder) => {
+        this.saving.set(false);
+        if (updatedOrder) {
+          this.successMessage.set('Order saved successfully!');
+          // Navigate to order detail view after short delay
+          setTimeout(() => {
+            this.router.navigate(['/customer/order', currentOrder.id]);
+          }, 1000);
+        }
+      },
+      error: (err) => {
+        console.error('Error saving order:', err);
+        this.saving.set(false);
+        this.errorMessage.set('Failed to save order. Please try again.');
+        setTimeout(() => this.errorMessage.set(''), 3000);
+      }
+    });
   }
 
   private generateId(): string {

@@ -1,0 +1,40 @@
+<div class="code-form-container">
+  <div class="header">
+    <div>
+      <h1>{{ isEdit ? 'Edit Code' : 'Add Code' }}</h1>
+      <p class="subtitle">Define reusable code values.</p>
+    </div>
+  </div>
+
+  <div *ngIf="loading && isEdit" class="loading">Loading...</div>
+  <div *ngIf="error" class="error">{{ error }}</div>
+
+  <form [formGroup]="form" (ngSubmit)="submit()" *ngIf="!loading || !isEdit">
+    <div class="form-grid">
+      <label>
+        <span>Type *</span>
+        <input type="text" formControlName="type" placeholder="TerminalStatus" />
+        <small class="error" *ngIf="getError('type')">{{ getError('type') }}</small>
+      </label>
+
+      <label>
+        <span>Value *</span>
+        <input type="text" formControlName="value" placeholder="1" />
+        <small class="error" *ngIf="getError('value')">{{ getError('value') }}</small>
+      </label>
+
+      <label class="full">
+        <span>Description *</span>
+        <input type="text" formControlName="description" placeholder="Active" />
+        <small class="error" *ngIf="getError('description')">{{ getError('description') }}</small>
+      </label>
+    </div>
+
+    <div class="actions">
+      <button type="button" class="btn btn-secondary" (click)="cancel()">Cancel</button>
+      <button type="submit" class="btn btn-primary" [disabled]="form.invalid || loading">
+        {{ loading ? 'Saving...' : (isEdit ? 'Update Code' : 'Create Code') }}
+      </button>
+    </div>
+  </form>
+</div>

@@ -1,0 +1,40 @@
+<div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 px-4">
+  <div class="max-w-md w-full bg-white rounded-lg shadow-xl p-8">
+    <div class="text-center">
+      <h1 class="text-3xl font-bold text-gray-900 mb-2">FreightFlow <span class="text-yellow-500">TMS</span></h1>
+      <p class="text-sm text-gray-600 mb-8">SHIP SMARTER, NOT HARDER</p>
+
+      @if (isLoading) {
+        <div class="py-8">
+          <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p class="mt-4 text-gray-600">Confirming your email...</p>
+        </div>
+      } @else {
+        <div class="py-8">
+          @if (isSuccess) {
+            <svg class="w-16 h-16 text-green-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+          } @else {
+            <svg class="w-16 h-16 text-red-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+          }
+          
+          <h2 class="text-xl font-semibold mb-2" [class.text-green-600]="isSuccess" [class.text-red-600]="!isSuccess">
+            {{ isSuccess ? 'Success!' : 'Error' }}
+          </h2>
+          <p class="text-gray-700 mb-6">{{ message }}</p>
+
+          @if (!isSuccess) {
+            <button 
+              (click)="goToLogin()" 
+              class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition duration-200">
+              Go to Login
+            </button>
+          }
+        </div>
+      }
+    </div>
+  </div>
+</div>

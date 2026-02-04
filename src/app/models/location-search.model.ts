@@ -1,0 +1,12 @@
+export interface LocationSearchResult {
+  id: string;
+  displayName: string;
+  address: string;
+  city: string;
+  state: string;
+  stateCode: string;
+  zipCode: string;
+  country: string;
+  latitude: number;
+  longitude: number;
+}
