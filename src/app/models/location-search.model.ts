@@ -8,4 +8,6 @@ export interface LocationSearchResult {
   zipCode: string;
   country: string;
   position?: { latitude: number; longitude: number };
+  latitude?: number;
+  longitude?: number;
 }

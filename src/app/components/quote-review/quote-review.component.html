@@ -156,20 +156,122 @@
         }
       </div>
 
+      @if (quote()!.shipmentDetails || quote()!.weight || quote()!.notes) {
+        <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+          <h3 class="font-semibold text-gray-800 mb-3">Shipment Details</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <div>
+              <div class="text-gray-600 uppercase text-xs font-semibold">Shipper</div>
+              <div class="text-gray-900">
+                {{ $any(quote()!.shipmentDetails)?.shipperName || '—' }}
+              </div>
+              <div class="text-gray-700">
+                {{ $any(quote()!.shipmentDetails)?.shipperAddress || $any(quote()!.shipmentDetails)?.shipperLocation || quote()!.origin || '—' }}
+              </div>
+              <div class="text-gray-700">
+                {{ $any(quote()!.shipmentDetails)?.shipperCity || '—' }}, {{ $any(quote()!.shipmentDetails)?.shipperState || '—' }} {{ $any(quote()!.shipmentDetails)?.shipperZip || '' }}
+              </div>
+            </div>
+            <div>
+              <div class="text-gray-600 uppercase text-xs font-semibold">Consignee</div>
+              <div class="text-gray-900">
+                {{ $any(quote()!.shipmentDetails)?.consigneeName || '—' }}
+              </div>
+              <div class="text-gray-700">
+                {{ $any(quote()!.shipmentDetails)?.consigneeAddress || $any(quote()!.shipmentDetails)?.consigneeLocation || quote()!.destination || '—' }}
+              </div>
+              <div class="text-gray-700">
+                {{ $any(quote()!.shipmentDetails)?.consigneeCity || '—' }}, {{ $any(quote()!.shipmentDetails)?.consigneeState || '—' }} {{ $any(quote()!.shipmentDetails)?.consigneeZip || '' }}
+              </div>
+            </div>
+            <div>
+              <div class="text-gray-600 uppercase text-xs font-semibold">Shipper Contact</div>
+              <div class="text-gray-900">
+                {{ $any(quote()!.shipmentDetails)?.shipperContactName || '—' }}
+              </div>
+            </div>
+            <div>
+              <div class="text-gray-600 uppercase text-xs font-semibold">Shipper Phone</div>
+              <div class="text-gray-900">
+                {{ $any(quote()!.shipmentDetails)?.shipperContactPhone || '—' }}
+              </div>
+            </div>
+            <div>
+              <div class="text-gray-600 uppercase text-xs font-semibold">Consignee Contact</div>
+              <div class="text-gray-900">
+                {{ $any(quote()!.shipmentDetails)?.consigneeContactName || '—' }}
+              </div>
+            </div>
+            <div>
+              <div class="text-gray-600 uppercase text-xs font-semibold">Consignee Phone</div>
+              <div class="text-gray-900">
+                {{ $any(quote()!.shipmentDetails)?.consigneeContactPhone || '—' }}
+              </div>
+            </div>
+            <div>
+              <div class="text-gray-600 uppercase text-xs font-semibold">Package Type</div>
+              <div class="text-gray-900">
+                {{ $any(quote()!.shipmentDetails)?.packageType || '—' }}
+              </div>
+            </div>
+            <div>
+              <div class="text-gray-600 uppercase text-xs font-semibold">Container Type</div>
+              <div class="text-gray-900">
+                {{ $any(quote()!.shipmentDetails)?.containerType || '—' }}
+              </div>
+            </div>
+            <div>
+              <div class="text-gray-600 uppercase text-xs font-semibold">Commodity Type</div>
+              <div class="text-gray-900">
+                {{ quote()!.shipmentDetails?.commodityType || '—' }}
+              </div>
+            </div>
+            <div>
+              <div class="text-gray-600 uppercase text-xs font-semibold">Weight (lbs)</div>
+              <div class="text-gray-900">
+                {{ quote()!.weight ?? '—' }}
+              </div>
+            </div>
+            <div class="md:col-span-2">
+              <div class="text-gray-600 uppercase text-xs font-semibold">Freight Description</div>
+              <div class="text-gray-900">
+                {{ $any(quote()!.shipmentDetails)?.freightDescription || '—' }}
+              </div>
+            </div>
+            <div class="md:col-span-2">
+              <div class="text-gray-600 uppercase text-xs font-semibold">Notes</div>
+              <div class="text-gray-900">
+                {{ quote()!.notes || '—' }}
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+
       <div class="flex gap-4">
-        <button
-          (click)="acceptQuote()"
-          [disabled]="!canAcceptQuote()"
-          class="flex-1 bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 disabled:bg-gray-400 flex items-center justify-center gap-2">
-          ✓ Save Quote & Create Order
-        </button>
-        <button
-          *ngIf="isCustomerPersona()"
-          (click)="holdQuote()"
-          [disabled]="loading()"
-          class="flex-1 bg-orange-600 text-white py-3 rounded-lg hover:bg-orange-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-          🔒 Hold Price
-        </button>
+        @if (isCustomerPersona() && quote()!.quoteType === 'Custom' && (quote()!.status === 'Preview' || quote()!.status === 'Draft')) {
+          <button
+            (click)="submitCustomRequest()"
+            [disabled]="loading()"
+            class="flex-1 bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 flex items-center justify-center gap-2">
+            ✓ Submit Request
+          </button>
+        }
+        @if (quote()!.quoteType !== 'Custom' || quote()!.status === 'Quoted') {
+          <button
+            (click)="acceptQuote()"
+            [disabled]="!canAcceptQuote()"
+            class="flex-1 bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 disabled:bg-gray-400 flex items-center justify-center gap-2">
+            ✓ Save Quote & Create Order
+          </button>
+          <button
+            *ngIf="isCustomerPersona()"
+            (click)="holdQuote()"
+            [disabled]="loading()"
+            class="flex-1 bg-orange-600 text-white py-3 rounded-lg hover:bg-orange-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+            🔒 Hold Price
+          </button>
+        }
         <button
           (click)="goBack()"
           class="flex-1 border border-gray-300 text-gray-800 py-3 rounded-lg hover:bg-gray-50 flex items-center justify-center gap-2">

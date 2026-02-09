@@ -1,7 +1,7 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { QuoteService } from '../../services/quote.service';
+import { QuoteService, CreateQuoteRequest } from '../../services/quote.service';
 import { AddressLookupService, AddressSuggestion } from '../../services/address-lookup.service';
 import { OrderService } from '../../services/order.service';
 import { AuthService } from '../../services/auth.service';
@@ -548,6 +548,111 @@ export class QuoteReviewComponent implements OnInit {
       error: (err) => {
         console.error('Error holding quote:', err);
         this.errorMessage.set(err?.error?.message || 'Failed to hold quote. Please try again.');
+        this.loading.set(false);
+      }
+    });
+  }
+
+  submitCustomRequest(): void {
+    const currentQuote = this.quote();
+    if (!currentQuote) return;
+
+    if (!this.isCustomerPersona()) {
+      this.errorMessage.set('Only customers can submit requests.');
+      return;
+    }
+
+    if ((currentQuote as any).quoteType !== 'Custom') {
+      this.errorMessage.set('Only custom quotes can be submitted as requests.');
+      return;
+    }
+
+    this.loading.set(true);
+    this.errorMessage.set('');
+
+    const shipment = (currentQuote as any).shipmentDetails || {};
+    const originZip = String(shipment.shipperZip || '').trim();
+    const destinationZip = String(shipment.consigneeZip || '').trim();
+    if (!originZip || !destinationZip) {
+      this.errorMessage.set('Shipper and consignee zip codes are required to submit a custom quote request.');
+      this.loading.set(false);
+      return;
+    }
+
+    const payload: CreateQuoteRequest = {
+      description: `Custom quote from ${originZip} to ${destinationZip}`,
+      originName: shipment.shipperName?.trim() || undefined,
+      originAddress: shipment.shipperAddress?.trim() || undefined,
+      originCity: shipment.shipperCity?.trim() || undefined,
+      originState: shipment.shipperState?.trim() || undefined,
+      originZip: originZip,
+      originPosition: shipment.shipperLatitude != null && shipment.shipperLongitude != null
+        ? { latitude: shipment.shipperLatitude, longitude: shipment.shipperLongitude }
+        : undefined,
+      destinationName: shipment.consigneeName?.trim() || undefined,
+      destinationAddress: shipment.consigneeAddress?.trim() || undefined,
+      destinationCity: shipment.consigneeCity?.trim() || undefined,
+      destinationState: shipment.consigneeState?.trim() || undefined,
+      destinationZip: destinationZip,
+      destinationPosition: shipment.consigneeLatitude != null && shipment.consigneeLongitude != null
+        ? { latitude: shipment.consigneeLatitude, longitude: shipment.consigneeLongitude }
+        : undefined,
+      originStopType: (currentQuote as any).originStopType || undefined,
+      extraOriginStopType: (currentQuote as any).extraOriginStopType || undefined,
+      extraDestinationStopType: (currentQuote as any).extraDestinationStopType || undefined,
+      destinationStopType: (currentQuote as any).destinationStopType || undefined,
+      status: 'Requested'
+    };
+
+    try {
+      const userStr = localStorage.getItem('current_user');
+      const userId = userStr ? JSON.parse(userStr).id : null;
+      if (userId) {
+        this.customerService.getCustomersForUser(userId).subscribe({
+          next: (list) => {
+            const broker = list.find(c => c.type === 5); // CustomerType.Broker
+            if (broker) {
+              payload.brokerCustomerId = broker.id;
+            } else {
+              const customerId = (currentQuote as any).customerId;
+              const parsed = Number(customerId);
+              if (!Number.isNaN(parsed)) payload.brokerCustomerId = parsed;
+            }
+            this.createRequestedQuote(payload);
+          },
+          error: () => {
+            const customerId = (currentQuote as any).customerId;
+            const parsed = Number(customerId);
+            if (!Number.isNaN(parsed)) payload.brokerCustomerId = parsed;
+            this.createRequestedQuote(payload);
+          }
+        });
+        return;
+      }
+    } catch {
+      // fall through
+    }
+
+    this.createRequestedQuote(payload);
+  }
+
+  private createRequestedQuote(payload: CreateQuoteRequest): void {
+    this.quoteService.createQuote(payload).subscribe({
+      next: (created) => {
+        this.loading.set(false);
+        if (created?.status === 'Opportunity') {
+          const message = created?.message || 'No train schedule was found. The quote was saved as an opportunity.';
+          this.toastService.show(message);
+          this.errorMessage.set(message);
+          this.router.navigate(['/customer/quotes']);
+          return;
+        }
+        this.toastService.show('Request submitted');
+        this.router.navigate(['/customer/quotes'], { queryParams: { status: 'Requested' } });
+      },
+      error: (err) => {
+        console.error('Error submitting request:', err);
+        this.errorMessage.set(err?.error?.message || 'Failed to submit request. Please try again.');
         this.loading.set(false);
       }
     });

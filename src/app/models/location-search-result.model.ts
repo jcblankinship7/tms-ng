@@ -12,4 +12,6 @@ export interface LocationSearchResult {
     latitude?: number;
     longitude?: number;
   };
+  latitude?: number;
+  longitude?: number;
 }

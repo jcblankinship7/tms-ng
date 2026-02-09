@@ -287,7 +287,7 @@ export class QuoteListComponent implements OnInit {
     // Auto-select status if provided via query params (e.g., after saving a draft)
     this.route.queryParams.subscribe(params => {
       const status = params['status'];
-      if (status && (status === 'Draft' || status === 'Quoted' || status === 'Accepted' || status === 'Submitted' || status === 'Rejected' || status === 'Expired')) {
+      if (status && (status === 'Draft' || status === 'Requested' || status === 'Quoted' || status === 'Accepted' || status === 'Submitted' || status === 'Rejected' || status === 'Expired')) {
         this.selectedStatus.set(status as any);
       }
     });
@@ -486,6 +486,7 @@ export class QuoteListComponent implements OnInit {
   getStatusClass(status: QuoteStatus): string {
     const classMap: { [key in QuoteStatus]: string } = {
       'Draft': 'bg-gray-100 text-gray-800',
+      'Requested': 'bg-blue-100 text-blue-800',
       'Submitted': 'bg-blue-100 text-blue-800',
       'Quoted': 'bg-blue-100 text-blue-800',
       'On Hold': 'bg-orange-100 text-orange-800',

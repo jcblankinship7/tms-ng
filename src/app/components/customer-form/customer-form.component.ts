@@ -47,7 +47,7 @@ export class CustomerFormComponent implements OnInit {
 
   quoteTypes = [
     { value: QuoteType.Spot, label: 'Spot' },
-    { value: QuoteType.Customer, label: 'Customer' }
+    { value: QuoteType.Custom, label: 'Custom' }
   ];
 
   constructor(
@@ -231,7 +231,8 @@ export class CustomerFormComponent implements OnInit {
         'consignee': 2,
         'other': 4,
         'spot': 1,
-        'customer': 2
+        'customer': 2,
+        'custom': 2
       };
       return stringEnumMap[strLower] || null;
     }

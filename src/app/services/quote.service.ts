@@ -5,12 +5,13 @@ import { map, delay } from 'rxjs/operators';
 import { Quote, Move, Terminal, MoveType } from '../models/order.model';
 
 export type QuoteType = 'Spot' | 'Custom';
-export type QuoteStatus = 'Draft' | 'Submitted' | 'Quoted' | 'On Hold' | 'Accepted' | 'Rejected' | 'Expired';
+export type QuoteStatus = 'Draft' | 'Requested' | 'Submitted' | 'Quoted' | 'On Hold' | 'Accepted' | 'Rejected' | 'Expired';
 export type StopType = 'Stay' | 'Drop';
 
 export interface CreateQuoteRequest {
   description: string;
   originPosition?: { latitude?: number; longitude?: number };
+  originName?: string;
   originAddress?: string;
   originCity?: string;
   originState?: string;
@@ -21,6 +22,7 @@ export interface CreateQuoteRequest {
   extraOriginState?: string;
   extraOriginPosition?: { latitude?: number; longitude?: number };
   destinationPosition?: { latitude?: number; longitude?: number };
+  destinationName?: string;
   destinationAddress?: string;
   destinationCity?: string;
   destinationState?: string;
@@ -84,6 +86,29 @@ export interface QuoteRequest {
     commodityType: string;
     dimensions?: string;
     pallets?: number;
+    packageType?: string;
+    containerType?: string;
+    freightDescription?: string;
+    shipperLocation?: string;
+    shipperName?: string;
+    shipperAddress?: string;
+    shipperCity?: string;
+    shipperState?: string;
+    shipperZip?: string;
+    shipperLatitude?: number;
+    shipperLongitude?: number;
+    shipperContactName?: string;
+    shipperContactPhone?: string;
+    consigneeLocation?: string;
+    consigneeName?: string;
+    consigneeAddress?: string;
+    consigneeCity?: string;
+    consigneeState?: string;
+    consigneeZip?: string;
+    consigneeLatitude?: number;
+    consigneeLongitude?: number;
+    consigneeContactName?: string;
+    consigneeContactPhone?: string;
   };
   // Pricing breakdown and moves
   baseRate?: number;
@@ -307,15 +332,20 @@ export class QuoteService {
           });
         }
 
+        const status = response.status;
+        const message = response.message;
+
         return {
           id: quoteId,
           quoteNumber: response.quoteNumber || '',
-          moves: moves.length > 0 ? moves : this.buildDefaultMoves(quoteId, request),
+          moves: moves.length > 0 || status === 'Opportunity' ? moves : this.buildDefaultMoves(quoteId, request),
           totalPrice: response.totalPrice || 0,
           baseRate: response.baseRate,
           fuelSurcharge: response.fuelSurcharge,
           pickupCost: response.pickupCost,
-          deliveryCost: response.deliveryCost
+          deliveryCost: response.deliveryCost,
+          status: status,
+          message: message
         } as any as Quote;
       })
     );

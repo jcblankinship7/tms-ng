@@ -92,7 +92,8 @@ export class CustomerListComponent implements OnInit {
         case 'spot':
           return 'Spot';
         case 'customer':
-          return 'Customer';
+        case 'custom':
+          return 'Custom';
         default:
           return quoteType; // Return original string if not recognized
       }
@@ -103,8 +104,8 @@ export class CustomerListComponent implements OnInit {
     switch (typeNum) {
       case QuoteType.Spot:
         return 'Spot';
-      case QuoteType.Customer:
-        return 'Customer';
+      case QuoteType.Custom:
+        return 'Custom';
       default:
         return 'Unknown';
     }

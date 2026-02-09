@@ -106,11 +106,40 @@ export class QuoteFormComponent implements OnInit {
   destinationStopType = signal<StopType>('Stay');
 
   // Custom Quote Fields
+  shipperName = signal('');
+  shipperAddress = signal('');
+  shipperCity = signal('');
+  shipperState = signal('');
+  shipperZip = signal('');
+  shipperContactName = signal('');
+  shipperContactPhone = signal('');
+  consigneeName = signal('');
+  consigneeAddress = signal('');
+  consigneeCity = signal('');
+  consigneeState = signal('');
+  consigneeZip = signal('');
+  consigneeContactName = signal('');
+  consigneeContactPhone = signal('');
+  shipperVerified = signal(false);
+  shipperVerifying = signal(false);
+  shipperLatitude = signal<number | null>(null);
+  shipperLongitude = signal<number | null>(null);
+  shipperVerifyMessage = signal('');
+  shipperZipOptions = signal<LocationSearchResult[]>([]);
+  shipperZipSelectionRequired = signal(false);
+  consigneeVerified = signal(false);
+  consigneeVerifying = signal(false);
+  consigneeLatitude = signal<number | null>(null);
+  consigneeLongitude = signal<number | null>(null);
+  consigneeVerifyMessage = signal('');
+  consigneeZipOptions = signal<LocationSearchResult[]>([]);
+  consigneeZipSelectionRequired = signal(false);
   weight = signal<number | null>(null);
   specialHandling = signal('');
   commodityType = signal('Electronics');
-  pallets = signal<number | null>(null);
-  dimensions = signal('');
+  packageType = signal('');
+  containerType = signal('');
+  freightDescription = signal('');
   notes = signal('');
 
   loading = signal(false);
@@ -130,6 +159,252 @@ export class QuoteFormComponent implements OnInit {
     return this.authService.getPersona() === 'Customer';
   }
 
+  private applyQuoteTypePreference(preferred: 'Custom' | 'Spot', lockForCustomer: boolean): void {
+    this.quoteType.set(preferred);
+    if (lockForCustomer) {
+      this.isCustomerDefaultCustom.set(preferred === 'Custom');
+      this.isCustomerDefaultSpot.set(preferred === 'Spot');
+      return;
+    }
+
+    this.isCustomerDefaultCustom.set(false);
+    this.isCustomerDefaultSpot.set(false);
+  }
+
+  isCustomLocationComplete(): boolean {
+    const shipperHasCityStateOrZip = !!(
+      this.shipperZip().trim() || (this.shipperCity().trim() && this.shipperState().trim())
+    );
+    const consigneeHasCityStateOrZip = !!(
+      this.consigneeZip().trim() || (this.consigneeCity().trim() && this.consigneeState().trim())
+    );
+
+    return !!(
+      this.shipperName().trim() &&
+      this.shipperAddress().trim() &&
+      shipperHasCityStateOrZip &&
+      this.consigneeName().trim() &&
+      this.consigneeAddress().trim() &&
+      consigneeHasCityStateOrZip
+    );
+  }
+
+  isCustomLocationVerified(): boolean {
+    return this.shipperVerified() && this.consigneeVerified();
+  }
+
+  private buildLocationSummary(label: 'shipper' | 'consignee'): string {
+    if (label === 'shipper') {
+      return `${this.shipperName().trim()}, ${this.shipperAddress().trim()}, ${this.shipperCity().trim()}, ${this.shipperState().trim()} ${this.shipperZip().trim()}`.replace(/\s+/g, ' ').trim();
+    }
+
+    return `${this.consigneeName().trim()}, ${this.consigneeAddress().trim()}, ${this.consigneeCity().trim()}, ${this.consigneeState().trim()} ${this.consigneeZip().trim()}`.replace(/\s+/g, ' ').trim();
+  }
+
+  private buildLocationQuery(label: 'shipper' | 'consignee'): string {
+    if (label === 'shipper') {
+      return this.shipperZip().trim() || `${this.shipperCity().trim()}, ${this.shipperState().trim()}`.trim();
+    }
+    return this.consigneeZip().trim() || `${this.consigneeCity().trim()}, ${this.consigneeState().trim()}`.trim();
+  }
+
+  private getZipFromResult(result?: LocationSearchResult | null): string {
+    if (!result) return '';
+    const direct = (result.zipCode || '').trim();
+    if (direct) return direct;
+    const text = `${result.displayName || ''} ${result.address || ''}`;
+    const match = text.match(/\b\d{5}(?:-\d{4})?\b/);
+    return match ? match[0] : '';
+  }
+
+  getZipLabel(result: LocationSearchResult): string {
+    const zip = this.getZipFromResult(result);
+    const city = result.city || '';
+    const state = result.stateCode || result.state || '';
+    if (zip) return `${zip} — ${city}, ${state}`.replace(/\s+/g, ' ').trim();
+    return `${city}, ${state}`.replace(/\s+/g, ' ').trim();
+  }
+
+  private mergeZipOptions(results: LocationSearchResult[]): LocationSearchResult[] {
+    const seen = new Set<string>();
+    return results.filter(result => {
+      const zip = this.getZipFromResult(result);
+      const key = zip ? `zip:${zip}` : `id:${result.id}`;
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+
+  onShipperLocationChanged(): void {
+    this.shipperVerified.set(false);
+    this.shipperVerifyMessage.set('');
+    this.shipperZipOptions.set([]);
+    this.shipperZipSelectionRequired.set(false);
+  }
+
+  onConsigneeLocationChanged(): void {
+    this.consigneeVerified.set(false);
+    this.consigneeVerifyMessage.set('');
+    this.consigneeZipOptions.set([]);
+    this.consigneeZipSelectionRequired.set(false);
+  }
+
+  selectShipperZip(optionId: string): void {
+    if (!optionId) return;
+    const match = this.shipperZipOptions().find(option => option.id === optionId);
+    const zip = this.getZipFromResult(match);
+    if (match) {
+      if (zip) this.shipperZip.set(zip);
+      this.shipperCity.set(match.city || this.shipperCity());
+      this.shipperState.set(match.stateCode || match.state || this.shipperState());
+      // capture lat/lon if provided
+      const lat = match.position?.latitude ?? (match as any).latitude ?? null;
+      const lon = match.position?.longitude ?? (match as any).longitude ?? null;
+      this.shipperLatitude.set(lat ?? null);
+      this.shipperLongitude.set(lon ?? null);
+    }
+    this.shipperZipOptions.set([]);
+    this.shipperZipSelectionRequired.set(false);
+    if (zip) {
+      this.shipperVerified.set(true);
+      this.shipperVerifyMessage.set('Location verified.');
+    } else {
+      this.shipperVerified.set(false);
+      this.shipperVerifyMessage.set('No zip code found for that selection.');
+    }
+  }
+
+  selectConsigneeZip(optionId: string): void {
+    if (!optionId) return;
+    const match = this.consigneeZipOptions().find(option => option.id === optionId);
+    const zip = this.getZipFromResult(match);
+    if (match) {
+      if (zip) this.consigneeZip.set(zip);
+      this.consigneeCity.set(match.city || this.consigneeCity());
+      this.consigneeState.set(match.stateCode || match.state || this.consigneeState());
+      const lat = match.position?.latitude ?? (match as any).latitude ?? null;
+      const lon = match.position?.longitude ?? (match as any).longitude ?? null;
+      this.consigneeLatitude.set(lat ?? null);
+      this.consigneeLongitude.set(lon ?? null);
+    }
+    this.consigneeZipOptions.set([]);
+    this.consigneeZipSelectionRequired.set(false);
+    if (zip) {
+      this.consigneeVerified.set(true);
+      this.consigneeVerifyMessage.set('Location verified.');
+    } else {
+      this.consigneeVerified.set(false);
+      this.consigneeVerifyMessage.set('No zip code found for that selection.');
+    }
+  }
+
+  verifyShipperLocation(): void {
+    if (!(this.shipperZip().trim() || (this.shipperCity().trim() && this.shipperState().trim()))) {
+      this.shipperVerifyMessage.set('Enter either city/state or zip to verify.');
+      this.shipperVerified.set(false);
+      return;
+    }
+    if (this.locationSearchService.isRateLimited()) {
+      this.shipperVerifyMessage.set('Search limit reached. Please wait and try again.');
+      this.shipperVerified.set(false);
+      return;
+    }
+
+    this.shipperVerifying.set(true);
+    this.shipperVerifyMessage.set('Verifying location...');
+    const primaryQuery = this.buildLocationQuery('shipper');
+
+    this.locationSearchService.searchLocation(primaryQuery).subscribe({
+      next: (results) => {
+        this.shipperVerifying.set(false);
+        const combined = this.mergeZipOptions(results);
+        const zipFiltered = combined.filter(option => this.getZipFromResult(option));
+        if (zipFiltered.length > 1 && !this.shipperZip().trim()) {
+          this.shipperZipOptions.set(zipFiltered);
+          this.shipperZipSelectionRequired.set(true);
+          this.shipperVerified.set(false);
+          this.shipperVerifyMessage.set('Multiple zip codes found. Please select one.');
+          return;
+        }
+        if (zipFiltered.length === 0) {
+          this.shipperVerified.set(false);
+          this.shipperVerifyMessage.set('No zip codes found for that city/state.');
+          return;
+        }
+
+        const match = zipFiltered[0];
+        if (!this.shipperCity().trim()) this.shipperCity.set(match.city || this.shipperCity());
+        if (!this.shipperState().trim()) this.shipperState.set(match.stateCode || match.state || this.shipperState());
+        if (!this.shipperZip().trim()) this.shipperZip.set(this.getZipFromResult(match) || this.shipperZip());
+        const shipperLat = match.position?.latitude ?? (match as any).latitude ?? null;
+        const shipperLon = match.position?.longitude ?? (match as any).longitude ?? null;
+        this.shipperLatitude.set(shipperLat ?? null);
+        this.shipperLongitude.set(shipperLon ?? null);
+        this.shipperVerified.set(true);
+        this.shipperVerifyMessage.set('Location verified.');
+      },
+      error: () => {
+        this.shipperVerifying.set(false);
+        this.shipperVerified.set(false);
+        this.shipperVerifyMessage.set('Unable to verify location.');
+      }
+    });
+  }
+
+  verifyConsigneeLocation(): void {
+    if (!(this.consigneeZip().trim() || (this.consigneeCity().trim() && this.consigneeState().trim()))) {
+      this.consigneeVerifyMessage.set('Enter either city/state or zip to verify.');
+      this.consigneeVerified.set(false);
+      return;
+    }
+    if (this.locationSearchService.isRateLimited()) {
+      this.consigneeVerifyMessage.set('Search limit reached. Please wait and try again.');
+      this.consigneeVerified.set(false);
+      return;
+    }
+
+    this.consigneeVerifying.set(true);
+    this.consigneeVerifyMessage.set('Verifying location...');
+    const primaryQuery = this.buildLocationQuery('consignee');
+
+    this.locationSearchService.searchLocation(primaryQuery).subscribe({
+      next: (results) => {
+        this.consigneeVerifying.set(false);
+        const combined = this.mergeZipOptions(results);
+        const zipFiltered = combined.filter(option => this.getZipFromResult(option));
+        if (zipFiltered.length > 1 && !this.consigneeZip().trim()) {
+          this.consigneeZipOptions.set(zipFiltered);
+          this.consigneeZipSelectionRequired.set(true);
+          this.consigneeVerified.set(false);
+          this.consigneeVerifyMessage.set('Multiple zip codes found. Please select one.');
+          return;
+        }
+        if (zipFiltered.length === 0) {
+          this.consigneeVerified.set(false);
+          this.consigneeVerifyMessage.set('No zip codes found for that city/state.');
+          return;
+        }
+
+        const match = zipFiltered[0];
+        if (!this.consigneeCity().trim()) this.consigneeCity.set(match.city || this.consigneeCity());
+        if (!this.consigneeState().trim()) this.consigneeState.set(match.stateCode || match.state || this.consigneeState());
+        if (!this.consigneeZip().trim()) this.consigneeZip.set(this.getZipFromResult(match) || this.consigneeZip());
+        const consigneeLat = match.position?.latitude ?? (match as any).latitude ?? null;
+        const consigneeLon = match.position?.longitude ?? (match as any).longitude ?? null;
+        this.consigneeLatitude.set(consigneeLat ?? null);
+        this.consigneeLongitude.set(consigneeLon ?? null);
+        this.consigneeVerified.set(true);
+        this.consigneeVerifyMessage.set('Location verified.');
+      },
+      error: () => {
+        this.consigneeVerifying.set(false);
+        this.consigneeVerified.set(false);
+        this.consigneeVerifyMessage.set('Unable to verify location.');
+      }
+    });
+  }
+
   ngOnInit(): void {
     // Monitor rate limit status
     this.rateLimitWarning.set(this.locationSearchService.isRateLimited() ? 
@@ -139,13 +414,9 @@ export class QuoteFormComponent implements OnInit {
     const ctx = this.customerContextService.getCustomerContext();
     if (ctx.quoteType) {
       if (ctx.quoteType === 'Custom') {
-        this.quoteType.set('Custom');
-        this.isCustomerDefaultCustom.set(true);
-        this.isCustomerDefaultSpot.set(false);
+        this.applyQuoteTypePreference('Custom', this.isCustomer());
       } else if (ctx.quoteType === 'Spot') {
-        this.quoteType.set('Spot');
-        this.isCustomerDefaultSpot.set(true);
-        this.isCustomerDefaultCustom.set(false);
+        this.applyQuoteTypePreference('Spot', this.isCustomer());
       }
     } else if (ctx.customerId) {
       // Fallback: use the user's associated customers lookup which we know the profile modal can query
@@ -162,13 +433,9 @@ export class QuoteFormComponent implements OnInit {
               const isCustomerType = quoteTypeVal === 2 || lowered === 'customer' || lowered === 'custom';
               const isSpotType = quoteTypeVal === 1 || lowered === 'spot';
               if (isCustomerType) {
-                this.quoteType.set('Custom');
-                this.isCustomerDefaultCustom.set(true);
-                this.isCustomerDefaultSpot.set(false);
+                  this.applyQuoteTypePreference('Custom', this.isCustomer());
               } else if (isSpotType) {
-                this.quoteType.set('Spot');
-                this.isCustomerDefaultSpot.set(true);
-                this.isCustomerDefaultCustom.set(false);
+                  this.applyQuoteTypePreference('Spot', this.isCustomer());
                 }
               }
             },
@@ -177,6 +444,28 @@ export class QuoteFormComponent implements OnInit {
         }
       } catch (e) {
         console.warn('Could not determine customer quote preference', e);
+      }
+    } else if (this.isCustomer()) {
+      try {
+        const userStr = localStorage.getItem('current_user');
+        const userId = userStr ? JSON.parse(userStr).id : null;
+        if (userId) {
+          this.customerService.getCustomersForUser(userId).subscribe({
+            next: (list) => {
+              if (!list || list.length === 0) return;
+              const primary = list[0];
+              const quoteTypeVal: any = (primary as any).quoteType;
+              const lowered = String(quoteTypeVal).toLowerCase();
+              const isCustomerType = quoteTypeVal === 2 || lowered === 'customer' || lowered === 'custom';
+              const preferred: 'Custom' | 'Spot' = isCustomerType ? 'Custom' : 'Spot';
+              this.customerContextService.setCustomerContext(primary.id, primary.name, userId, preferred);
+              this.applyQuoteTypePreference(preferred, true);
+            },
+            error: (err) => console.warn('Could not load customers for user', err)
+          });
+        }
+      } catch (e) {
+        console.warn('Could not load customers for user', e);
       }
     }
 
@@ -280,8 +569,24 @@ export class QuoteFormComponent implements OnInit {
 
         if (raw.shipmentDetails) {
           this.commodityType.set(raw.shipmentDetails.commodityType || this.commodityType());
-          this.pallets.set(raw.shipmentDetails.pallets || this.pallets());
-          this.dimensions.set(raw.shipmentDetails.dimensions || this.dimensions());
+          const rawPallets = raw.shipmentDetails.pallets;
+          this.packageType.set(raw.shipmentDetails.packageType || (rawPallets != null ? String(rawPallets) : this.packageType()));
+          this.containerType.set(raw.shipmentDetails.containerType || raw.shipmentDetails.dimensions || this.containerType());
+          this.freightDescription.set(raw.shipmentDetails.freightDescription || this.freightDescription());
+          this.shipperName.set(raw.shipmentDetails.shipperName || this.shipperName());
+          this.shipperAddress.set(raw.shipmentDetails.shipperAddress || raw.shipmentDetails.shipperLocation || raw.origin || this.shipperAddress());
+          this.shipperCity.set(raw.shipmentDetails.shipperCity || this.shipperCity());
+          this.shipperState.set(raw.shipmentDetails.shipperState || this.shipperState());
+          this.shipperZip.set(raw.shipmentDetails.shipperZip || this.shipperZip());
+          this.shipperContactName.set(raw.shipmentDetails.shipperContactName || this.shipperContactName());
+          this.shipperContactPhone.set(raw.shipmentDetails.shipperContactPhone || this.shipperContactPhone());
+          this.consigneeName.set(raw.shipmentDetails.consigneeName || this.consigneeName());
+          this.consigneeAddress.set(raw.shipmentDetails.consigneeAddress || raw.shipmentDetails.consigneeLocation || raw.destination || this.consigneeAddress());
+          this.consigneeCity.set(raw.shipmentDetails.consigneeCity || this.consigneeCity());
+          this.consigneeState.set(raw.shipmentDetails.consigneeState || this.consigneeState());
+          this.consigneeZip.set(raw.shipmentDetails.consigneeZip || this.consigneeZip());
+          this.consigneeContactName.set(raw.shipmentDetails.consigneeContactName || this.consigneeContactName());
+          this.consigneeContactPhone.set(raw.shipmentDetails.consigneeContactPhone || this.consigneeContactPhone());
         }
 
         this.notes.set(raw.notes || quote.notes || '');
@@ -338,8 +643,24 @@ export class QuoteFormComponent implements OnInit {
 
         if (quote.shipmentDetails) {
           this.commodityType.set(quote.shipmentDetails.commodityType || this.commodityType());
-          this.pallets.set(quote.shipmentDetails.pallets || this.pallets());
-          this.dimensions.set(quote.shipmentDetails.dimensions || this.dimensions());
+          const quotePallets = quote.shipmentDetails.pallets;
+          this.packageType.set((quote.shipmentDetails as any).packageType || (quotePallets != null ? String(quotePallets) : this.packageType()));
+          this.containerType.set((quote.shipmentDetails as any).containerType || quote.shipmentDetails.dimensions || this.containerType());
+          this.freightDescription.set((quote.shipmentDetails as any).freightDescription || this.freightDescription());
+          this.shipperName.set((quote.shipmentDetails as any).shipperName || this.shipperName());
+          this.shipperAddress.set((quote.shipmentDetails as any).shipperAddress || (quote.shipmentDetails as any).shipperLocation || quote.origin || this.shipperAddress());
+          this.shipperCity.set((quote.shipmentDetails as any).shipperCity || this.shipperCity());
+          this.shipperState.set((quote.shipmentDetails as any).shipperState || this.shipperState());
+          this.shipperZip.set((quote.shipmentDetails as any).shipperZip || this.shipperZip());
+          this.shipperContactName.set((quote.shipmentDetails as any).shipperContactName || this.shipperContactName());
+          this.shipperContactPhone.set((quote.shipmentDetails as any).shipperContactPhone || this.shipperContactPhone());
+          this.consigneeName.set((quote.shipmentDetails as any).consigneeName || this.consigneeName());
+          this.consigneeAddress.set((quote.shipmentDetails as any).consigneeAddress || (quote.shipmentDetails as any).consigneeLocation || quote.destination || this.consigneeAddress());
+          this.consigneeCity.set((quote.shipmentDetails as any).consigneeCity || this.consigneeCity());
+          this.consigneeState.set((quote.shipmentDetails as any).consigneeState || this.consigneeState());
+          this.consigneeZip.set((quote.shipmentDetails as any).consigneeZip || this.consigneeZip());
+          this.consigneeContactName.set((quote.shipmentDetails as any).consigneeContactName || this.consigneeContactName());
+          this.consigneeContactPhone.set((quote.shipmentDetails as any).consigneeContactPhone || this.consigneeContactPhone());
         }
 
         this.notes.set(quote.notes || '');
@@ -410,8 +731,24 @@ export class QuoteFormComponent implements OnInit {
             // Shipment details
             if (raw.shipmentDetails) {
               this.commodityType.set(raw.shipmentDetails.commodityType || this.commodityType());
-              this.pallets.set(raw.shipmentDetails.pallets || this.pallets());
-              this.dimensions.set(raw.shipmentDetails.dimensions || this.dimensions());
+              const rawPallets = raw.shipmentDetails.pallets;
+              this.packageType.set(raw.shipmentDetails.packageType || (rawPallets != null ? String(rawPallets) : this.packageType()));
+              this.containerType.set(raw.shipmentDetails.containerType || raw.shipmentDetails.dimensions || this.containerType());
+              this.freightDescription.set(raw.shipmentDetails.freightDescription || this.freightDescription());
+              this.shipperName.set(raw.shipmentDetails.shipperName || this.shipperName());
+              this.shipperAddress.set(raw.shipmentDetails.shipperAddress || raw.shipmentDetails.shipperLocation || raw.origin || this.shipperAddress());
+              this.shipperCity.set(raw.shipmentDetails.shipperCity || this.shipperCity());
+              this.shipperState.set(raw.shipmentDetails.shipperState || this.shipperState());
+              this.shipperZip.set(raw.shipmentDetails.shipperZip || this.shipperZip());
+              this.shipperContactName.set(raw.shipmentDetails.shipperContactName || this.shipperContactName());
+              this.shipperContactPhone.set(raw.shipmentDetails.shipperContactPhone || this.shipperContactPhone());
+              this.consigneeName.set(raw.shipmentDetails.consigneeName || this.consigneeName());
+              this.consigneeAddress.set(raw.shipmentDetails.consigneeAddress || raw.shipmentDetails.consigneeLocation || raw.destination || this.consigneeAddress());
+              this.consigneeCity.set(raw.shipmentDetails.consigneeCity || this.consigneeCity());
+              this.consigneeState.set(raw.shipmentDetails.consigneeState || this.consigneeState());
+              this.consigneeZip.set(raw.shipmentDetails.consigneeZip || this.consigneeZip());
+              this.consigneeContactName.set(raw.shipmentDetails.consigneeContactName || this.consigneeContactName());
+              this.consigneeContactPhone.set(raw.shipmentDetails.consigneeContactPhone || this.consigneeContactPhone());
             }
 
             // Notes and weight fallback
@@ -475,8 +812,24 @@ export class QuoteFormComponent implements OnInit {
             // Shipment details fallback
             if (quote.shipmentDetails) {
               this.commodityType.set(quote.shipmentDetails.commodityType || this.commodityType());
-              this.pallets.set(quote.shipmentDetails.pallets || this.pallets());
-              this.dimensions.set(quote.shipmentDetails.dimensions || this.dimensions());
+              const quotePallets = quote.shipmentDetails.pallets;
+              this.packageType.set((quote.shipmentDetails as any).packageType || (quotePallets != null ? String(quotePallets) : this.packageType()));
+              this.containerType.set((quote.shipmentDetails as any).containerType || quote.shipmentDetails.dimensions || this.containerType());
+              this.freightDescription.set((quote.shipmentDetails as any).freightDescription || this.freightDescription());
+              this.shipperName.set((quote.shipmentDetails as any).shipperName || this.shipperName());
+              this.shipperAddress.set((quote.shipmentDetails as any).shipperAddress || (quote.shipmentDetails as any).shipperLocation || quote.origin || this.shipperAddress());
+              this.shipperCity.set((quote.shipmentDetails as any).shipperCity || this.shipperCity());
+              this.shipperState.set((quote.shipmentDetails as any).shipperState || this.shipperState());
+              this.shipperZip.set((quote.shipmentDetails as any).shipperZip || this.shipperZip());
+              this.shipperContactName.set((quote.shipmentDetails as any).shipperContactName || this.shipperContactName());
+              this.shipperContactPhone.set((quote.shipmentDetails as any).shipperContactPhone || this.shipperContactPhone());
+              this.consigneeName.set((quote.shipmentDetails as any).consigneeName || this.consigneeName());
+              this.consigneeAddress.set((quote.shipmentDetails as any).consigneeAddress || (quote.shipmentDetails as any).consigneeLocation || quote.destination || this.consigneeAddress());
+              this.consigneeCity.set((quote.shipmentDetails as any).consigneeCity || this.consigneeCity());
+              this.consigneeState.set((quote.shipmentDetails as any).consigneeState || this.consigneeState());
+              this.consigneeZip.set((quote.shipmentDetails as any).consigneeZip || this.consigneeZip());
+              this.consigneeContactName.set((quote.shipmentDetails as any).consigneeContactName || this.consigneeContactName());
+              this.consigneeContactPhone.set((quote.shipmentDetails as any).consigneeContactPhone || this.consigneeContactPhone());
             }
 
             // Notes and weight
@@ -485,8 +838,24 @@ export class QuoteFormComponent implements OnInit {
 
           } else if (quote.shipmentDetails) {
             this.commodityType.set(quote.shipmentDetails.commodityType);
-            this.pallets.set(quote.shipmentDetails.pallets || null);
-            this.dimensions.set(quote.shipmentDetails.dimensions || '');
+            const quotePallets = quote.shipmentDetails.pallets;
+            this.packageType.set((quote.shipmentDetails as any).packageType || (quotePallets != null ? String(quotePallets) : this.packageType()));
+            this.containerType.set((quote.shipmentDetails as any).containerType || quote.shipmentDetails.dimensions || '');
+            this.freightDescription.set((quote.shipmentDetails as any).freightDescription || '');
+            this.shipperName.set((quote.shipmentDetails as any).shipperName || this.shipperName());
+            this.shipperAddress.set((quote.shipmentDetails as any).shipperAddress || (quote.shipmentDetails as any).shipperLocation || quote.origin || this.shipperAddress());
+            this.shipperCity.set((quote.shipmentDetails as any).shipperCity || this.shipperCity());
+            this.shipperState.set((quote.shipmentDetails as any).shipperState || this.shipperState());
+            this.shipperZip.set((quote.shipmentDetails as any).shipperZip || this.shipperZip());
+            this.shipperContactName.set((quote.shipmentDetails as any).shipperContactName || this.shipperContactName());
+            this.shipperContactPhone.set((quote.shipmentDetails as any).shipperContactPhone || this.shipperContactPhone());
+            this.consigneeName.set((quote.shipmentDetails as any).consigneeName || this.consigneeName());
+            this.consigneeAddress.set((quote.shipmentDetails as any).consigneeAddress || (quote.shipmentDetails as any).consigneeLocation || quote.destination || this.consigneeAddress());
+            this.consigneeCity.set((quote.shipmentDetails as any).consigneeCity || this.consigneeCity());
+            this.consigneeState.set((quote.shipmentDetails as any).consigneeState || this.consigneeState());
+            this.consigneeZip.set((quote.shipmentDetails as any).consigneeZip || this.consigneeZip());
+            this.consigneeContactName.set((quote.shipmentDetails as any).consigneeContactName || this.consigneeContactName());
+            this.consigneeContactPhone.set((quote.shipmentDetails as any).consigneeContactPhone || this.consigneeContactPhone());
           }
         }
       },
@@ -934,29 +1303,48 @@ export class QuoteFormComponent implements OnInit {
   }
 
   generateCustomQuote(): void {
-    // Validate that we have origin/destination and at least some custom fields
-    if (!this.selectedOrigin() || !this.selectedDestination()) {
-      this.errorMessage.set('Please select valid initial pickup and final delivery locations (zip codes are required)');
+    if (!this.isCustomLocationComplete()) {
+      this.errorMessage.set('Please enter shipper and consignee name, address, city, state, and zip.');
+      return;
+    }
+    if (!this.isCustomLocationVerified()) {
+      this.errorMessage.set('Please verify shipper and consignee locations before submitting.');
       return;
     }
 
     this.loading.set(true);
     this.errorMessage.set('');
 
-    const origin = this.selectedOrigin()!;
-    const destination = this.selectedDestination()!;
-
     const quoteReq: any = {
       customerId: String(this.customerContextService.getCustomerContext().customerId || ''),
       quoteType: 'Custom',
       status: 'Draft',
-      origin: `${origin.city} (${origin.zipCode})`,
-      destination: `${destination.city} (${destination.zipCode})`,
+      origin: this.buildLocationSummary('shipper'),
+      destination: this.buildLocationSummary('consignee'),
       weight: this.weight(),
       shipmentDetails: {
+        shipperName: this.shipperName().trim(),
+        shipperAddress: this.shipperAddress().trim(),
+        shipperCity: this.shipperCity().trim(),
+        shipperState: this.shipperState().trim(),
+        shipperZip: this.shipperZip().trim(),
+        shipperLatitude: this.shipperLatitude() ?? undefined,
+        shipperLongitude: this.shipperLongitude() ?? undefined,
+        shipperContactName: this.shipperContactName().trim() || undefined,
+        shipperContactPhone: this.shipperContactPhone().trim() || undefined,
+        consigneeName: this.consigneeName().trim(),
+        consigneeAddress: this.consigneeAddress().trim(),
+        consigneeCity: this.consigneeCity().trim(),
+        consigneeState: this.consigneeState().trim(),
+        consigneeZip: this.consigneeZip().trim(),
+        consigneeLatitude: this.consigneeLatitude() ?? undefined,
+        consigneeLongitude: this.consigneeLongitude() ?? undefined,
+        consigneeContactName: this.consigneeContactName().trim() || undefined,
+        consigneeContactPhone: this.consigneeContactPhone().trim() || undefined,
         commodityType: this.commodityType(),
-        pallets: this.pallets() || undefined,
-        dimensions: this.dimensions() || undefined
+        packageType: this.packageType() || undefined,
+        containerType: this.containerType() || undefined,
+        freightDescription: this.freightDescription() || undefined
       },
       notes: this.notes() || undefined
     };
@@ -970,13 +1358,32 @@ export class QuoteFormComponent implements OnInit {
       quoteType: 'Custom',
       status: 'Preview',
       createdDate: new Date().toISOString(),
-      origin: `${origin.zipCode}`,
-      destination: `${destination.zipCode}`,
+      origin: this.buildLocationSummary('shipper'),
+      destination: this.buildLocationSummary('consignee'),
       weight: this.weight(),
       shipmentDetails: {
+        shipperName: this.shipperName().trim(),
+        shipperAddress: this.shipperAddress().trim(),
+        shipperCity: this.shipperCity().trim(),
+        shipperState: this.shipperState().trim(),
+        shipperZip: this.shipperZip().trim(),
+        shipperLatitude: this.shipperLatitude() ?? undefined,
+        shipperLongitude: this.shipperLongitude() ?? undefined,
+        shipperContactName: this.shipperContactName().trim() || undefined,
+        shipperContactPhone: this.shipperContactPhone().trim() || undefined,
+        consigneeName: this.consigneeName().trim(),
+        consigneeAddress: this.consigneeAddress().trim(),
+        consigneeCity: this.consigneeCity().trim(),
+        consigneeState: this.consigneeState().trim(),
+        consigneeZip: this.consigneeZip().trim(),
+        consigneeLatitude: this.consigneeLatitude() ?? undefined,
+        consigneeLongitude: this.consigneeLongitude() ?? undefined,
+        consigneeContactName: this.consigneeContactName().trim() || undefined,
+        consigneeContactPhone: this.consigneeContactPhone().trim() || undefined,
         commodityType: this.commodityType(),
-        pallets: this.pallets() || undefined,
-        dimensions: this.dimensions() || undefined
+        packageType: this.packageType() || undefined,
+        containerType: this.containerType() || undefined,
+        freightDescription: this.freightDescription() || undefined
       },
       notes: this.notes() || undefined,
       totalPrice: 0,
@@ -1000,28 +1407,49 @@ export class QuoteFormComponent implements OnInit {
       return;
     }
 
-    if (!this.selectedOrigin() || !this.selectedDestination()) {
-      this.errorMessage.set('Please select valid initial pickup and final delivery locations to save a draft.');
-      return;
-    }
-
     this.loading.set(true);
     this.errorMessage.set('');
 
-    const origin = this.selectedOrigin()!;
-    const destination = this.selectedDestination()!;
-
     if (this.quoteType() === 'Custom') {
+      if (!this.isCustomLocationComplete()) {
+        this.errorMessage.set('Please enter shipper and consignee name, address, city, state, and zip to save a draft.');
+        this.loading.set(false);
+        return;
+      }
+      if (!this.isCustomLocationVerified()) {
+        this.errorMessage.set('Please verify shipper and consignee locations before saving a draft.');
+        this.loading.set(false);
+        return;
+      }
       const quoteReq: any = {
         quoteType: 'Custom',
         status: 'Draft',
-        origin: `${origin.city} (${origin.zipCode})`,
-        destination: `${destination.city} (${destination.zipCode})`,
+        origin: this.buildLocationSummary('shipper'),
+        destination: this.buildLocationSummary('consignee'),
         weight: this.weight(),
         shipmentDetails: {
+          shipperName: this.shipperName().trim(),
+          shipperAddress: this.shipperAddress().trim(),
+          shipperCity: this.shipperCity().trim(),
+          shipperState: this.shipperState().trim(),
+          shipperZip: this.shipperZip().trim(),
+          shipperLatitude: this.shipperLatitude() ?? undefined,
+          shipperLongitude: this.shipperLongitude() ?? undefined,
+          shipperContactName: this.shipperContactName().trim() || undefined,
+          shipperContactPhone: this.shipperContactPhone().trim() || undefined,
+          consigneeName: this.consigneeName().trim(),
+          consigneeAddress: this.consigneeAddress().trim(),
+          consigneeCity: this.consigneeCity().trim(),
+          consigneeState: this.consigneeState().trim(),
+          consigneeZip: this.consigneeZip().trim(),
+          consigneeLatitude: this.consigneeLatitude() ?? undefined,
+          consigneeLongitude: this.consigneeLongitude() ?? undefined,
+          consigneeContactName: this.consigneeContactName().trim() || undefined,
+          consigneeContactPhone: this.consigneeContactPhone().trim() || undefined,
           commodityType: this.commodityType(),
-          pallets: this.pallets() || undefined,
-          dimensions: this.dimensions() || undefined
+          packageType: this.packageType() || undefined,
+          containerType: this.containerType() || undefined,
+          freightDescription: this.freightDescription() || undefined
         },
         notes: this.notes() || undefined,
         totalPrice: this.generatedQuote()?.totalPrice ?? 0
@@ -1042,6 +1470,14 @@ export class QuoteFormComponent implements OnInit {
         this._createFormDraftAndNavigate(quoteReq);
       }
     } else {
+      if (!this.selectedOrigin() || !this.selectedDestination()) {
+        this.errorMessage.set('Please select valid initial pickup and final delivery locations to save a draft.');
+        this.loading.set(false);
+        return;
+      }
+
+      const origin = this.selectedOrigin()!;
+      const destination = this.selectedDestination()!;
       // Spot draft
       const quoteReq: any = {
         quoteType: 'Spot',

@@ -86,38 +86,197 @@
       <!-- CUSTOM QUOTE FORM -->
       @if (quoteType() === 'Custom') {
       <div class="space-y-6">
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Weight (lbs)</label>
-            <input type="number" [(ngModel)]="weight" placeholder="Enter weight in pounds" title="Weight in pounds"
-              class="w-full px-4 py-2 border rounded-lg" />
+        <div class="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded text-sm">
+          <span class="font-semibold">Required:</span>
+          Shipper and consignee name, address, and either city + state or zip. Locations must be verified.
+        </div>
+        <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-base font-semibold text-gray-900">Shipper Information</h3>
+            <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">Pickup</span>
           </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Pallets</label>
-            <input type="number" [(ngModel)]="pallets" placeholder="Number of pallets" title="Number of pallets"
-              class="w-full px-4 py-2 border rounded-lg" />
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="lg:col-span-2">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Shipper Name <span class="text-red-600">*</span></label>
+              <input type="text" [(ngModel)]="shipperName" placeholder="Shipper name" title="Shipper name"
+                class="w-full px-4 py-2 border rounded-lg" />
+            </div>
+            <div class="lg:col-span-2">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Shipper Address <span class="text-red-600">*</span></label>
+              <input type="text" [(ngModel)]="shipperAddress" (ngModelChange)="onShipperLocationChanged()" placeholder="Street address" title="Shipper address"
+                class="w-full px-4 py-2 border rounded-lg" />
+            </div>
+            <div class="lg:col-span-2">
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">City <span class="text-red-600">*</span></label>
+                  <input type="text" [(ngModel)]="shipperCity" (ngModelChange)="onShipperLocationChanged()" placeholder="City" title="Shipper city"
+                    class="w-full px-4 py-2 border rounded-lg" />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">State <span class="text-red-600">*</span></label>
+                  <input type="text" [(ngModel)]="shipperState" (ngModelChange)="onShipperLocationChanged()" placeholder="State" title="Shipper state"
+                    class="w-full px-4 py-2 border rounded-lg" />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Zip Code <span class="text-red-600">*</span></label>
+                  <input type="text" [(ngModel)]="shipperZip" (ngModelChange)="onShipperLocationChanged()" placeholder="Zip code" title="Shipper zip code"
+                    class="w-full px-4 py-2 border rounded-lg" />
+                </div>
+              </div>
+              <p class="text-xs text-gray-500 mt-2">Provide City + State or a Zip Code.</p>
+            </div>
+            <div class="lg:col-span-2 flex items-center gap-3">
+              <button type="button" (click)="verifyShipperLocation()" [disabled]="shipperVerifying()"
+                class="px-4 py-2 rounded-lg border border-blue-600 text-blue-700 font-semibold text-sm hover:bg-blue-50 disabled:opacity-60">
+                {{ shipperVerifying() ? 'Verifying...' : 'Verify Location' }}
+              </button>
+              <span class="text-sm" [class.text-green-600]="shipperVerified()" [class.text-gray-500]="!shipperVerified()">
+                {{ shipperVerifyMessage() }}
+              </span>
+            </div>
+            @if (shipperVerified() && shipperLatitude() !== null && shipperLongitude() !== null) {
+              <div class="lg:col-span-2 text-xs text-gray-500">
+                Verified coordinates: {{ shipperLatitude() }}, {{ shipperLongitude() }}
+              </div>
+            }
+            @if (shipperZipSelectionRequired()) {
+              <div class="lg:col-span-2">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Select Zip Code</label>
+                <select class="w-full px-4 py-2 border rounded-lg" title="Shipper zip selection" (change)="selectShipperZip($any($event.target).value)">
+                  <option value="" disabled selected>Select a zip code</option>
+                  @for (result of shipperZipOptions(); track result.id) {
+                    <option [value]="result.id">{{ getZipLabel(result) }}</option>
+                  }
+                </select>
+              </div>
+            }
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Contact Name</label>
+              <input type="text" [(ngModel)]="shipperContactName" placeholder="Contact name" title="Shipper contact name"
+                class="w-full px-4 py-2 border rounded-lg" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Contact Phone</label>
+              <input type="text" [(ngModel)]="shipperContactPhone" placeholder="Phone number" title="Shipper contact phone"
+                class="w-full px-4 py-2 border rounded-lg" />
+            </div>
           </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Commodity Type</label>
-            <input type="text" [(ngModel)]="commodityType" placeholder="e.g., Electronics" title="Commodity type"
-              class="w-full px-4 py-2 border rounded-lg" />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Dimensions</label>
-            <input type="text" [(ngModel)]="dimensions" placeholder="LxWxH or notes" title="Dimensions"
-              class="w-full px-4 py-2 border rounded-lg" />
-          </div>
-          <div class="col-span-2">
-            <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-            <textarea rows="4" [(ngModel)]="notes" placeholder="Additional shipment notes" title="Notes"
-              class="w-full px-4 py-2 border rounded-lg"></textarea>
-          </div>
+        </div>
 
+        <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-base font-semibold text-gray-900">Consignee Information</h3>
+            <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">Delivery</span>
+          </div>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="lg:col-span-2">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Consignee Name <span class="text-red-600">*</span></label>
+              <input type="text" [(ngModel)]="consigneeName" placeholder="Consignee name" title="Consignee name"
+                class="w-full px-4 py-2 border rounded-lg" />
+            </div>
+            <div class="lg:col-span-2">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Consignee Address <span class="text-red-600">*</span></label>
+              <input type="text" [(ngModel)]="consigneeAddress" (ngModelChange)="onConsigneeLocationChanged()" placeholder="Street address" title="Consignee address"
+                class="w-full px-4 py-2 border rounded-lg" />
+            </div>
+            <div class="lg:col-span-2">
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">City <span class="text-red-600">*</span></label>
+                  <input type="text" [(ngModel)]="consigneeCity" (ngModelChange)="onConsigneeLocationChanged()" placeholder="City" title="Consignee city"
+                    class="w-full px-4 py-2 border rounded-lg" />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">State <span class="text-red-600">*</span></label>
+                  <input type="text" [(ngModel)]="consigneeState" (ngModelChange)="onConsigneeLocationChanged()" placeholder="State" title="Consignee state"
+                    class="w-full px-4 py-2 border rounded-lg" />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Zip Code <span class="text-red-600">*</span></label>
+                  <input type="text" [(ngModel)]="consigneeZip" (ngModelChange)="onConsigneeLocationChanged()" placeholder="Zip code" title="Consignee zip code"
+                    class="w-full px-4 py-2 border rounded-lg" />
+                </div>
+              </div>
+              <p class="text-xs text-gray-500 mt-2">Provide City + State or a Zip Code.</p>
+            </div>
+            <div class="lg:col-span-2 flex items-center gap-3">
+              <button type="button" (click)="verifyConsigneeLocation()" [disabled]="consigneeVerifying()"
+                class="px-4 py-2 rounded-lg border border-blue-600 text-blue-700 font-semibold text-sm hover:bg-blue-50 disabled:opacity-60">
+                {{ consigneeVerifying() ? 'Verifying...' : 'Verify Location' }}
+              </button>
+              <span class="text-sm" [class.text-green-600]="consigneeVerified()" [class.text-gray-500]="!consigneeVerified()">
+                {{ consigneeVerifyMessage() }}
+              </span>
+            </div>
+            @if (consigneeVerified() && consigneeLatitude() !== null && consigneeLongitude() !== null) {
+              <div class="lg:col-span-2 text-xs text-gray-500">
+                Verified coordinates: {{ consigneeLatitude() }}, {{ consigneeLongitude() }}
+              </div>
+            }
+            @if (consigneeZipSelectionRequired()) {
+              <div class="lg:col-span-2">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Select Zip Code</label>
+                <select class="w-full px-4 py-2 border rounded-lg" title="Consignee zip selection" (change)="selectConsigneeZip($any($event.target).value)">
+                  <option value="" disabled selected>Select a zip code</option>
+                  @for (result of consigneeZipOptions(); track result.id) {
+                    <option [value]="result.id">{{ getZipLabel(result) }}</option>
+                  }
+                </select>
+              </div>
+            }
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Contact Name</label>
+              <input type="text" [(ngModel)]="consigneeContactName" placeholder="Contact name" title="Consignee contact name"
+                class="w-full px-4 py-2 border rounded-lg" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Contact Phone</label>
+              <input type="text" [(ngModel)]="consigneeContactPhone" placeholder="Phone number" title="Consignee contact phone"
+                class="w-full px-4 py-2 border rounded-lg" />
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
+          <h3 class="text-base font-semibold text-gray-900 mb-4">Shipment Details</h3>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Weight (lbs)</label>
+              <input type="number" [(ngModel)]="weight" placeholder="Enter weight in pounds" title="Weight in pounds"
+                class="w-full px-4 py-2 border rounded-lg" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Package Type</label>
+              <input type="text" [(ngModel)]="packageType" placeholder="e.g., Pallet, Carton, Crate" title="Package type"
+                class="w-full px-4 py-2 border rounded-lg" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Commodity Type</label>
+              <input type="text" [(ngModel)]="commodityType" placeholder="e.g., Electronics" title="Commodity type"
+                class="w-full px-4 py-2 border rounded-lg" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Container Type</label>
+              <input type="text" [(ngModel)]="containerType" placeholder="e.g., 20ft, 40ft, 53ft" title="Container type"
+                class="w-full px-4 py-2 border rounded-lg" />
+            </div>
+            <div class="lg:col-span-2">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Freight Description</label>
+              <textarea rows="3" [(ngModel)]="freightDescription" placeholder="Describe the freight" title="Freight description"
+                class="w-full px-4 py-2 border rounded-lg"></textarea>
+            </div>
+            <div class="lg:col-span-2">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+              <textarea rows="4" [(ngModel)]="notes" placeholder="Additional shipment notes" title="Notes"
+                class="w-full px-4 py-2 border rounded-lg"></textarea>
+            </div>
+          </div>
         </div>
       </div>
 
       <div class="mt-4">
-        <button (click)="generateCustomQuote()" [disabled]="loading() || !selectedOrigin() || !selectedDestination()"
+        <button (click)="generateCustomQuote()" [disabled]="loading() || !isCustomLocationComplete() || !isCustomLocationVerified()"
           class="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium text-lg transition-colors">
           {{ loading() ? 'Requesting...' : 'Request Custom Quote' }}
         </button>

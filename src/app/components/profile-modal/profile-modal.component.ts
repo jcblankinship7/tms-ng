@@ -107,6 +107,10 @@ export class ProfileModalComponent implements OnInit {
           }
         } else if (brokerCustomers.length > 0) {
           this.selectedCustomerId.set(brokerCustomers[0].id);
+          const qt: any = (brokerCustomers[0] as any).quoteType;
+          const isCustomerType = qt === 2 || String(qt).toLowerCase() === 'customer' || String(qt).toLowerCase() === 'custom';
+          const quoteTypeStr: 'Spot' | 'Custom' = isCustomerType ? 'Custom' : 'Spot';
+          this.customerContextService.setCustomerContext(brokerCustomers[0].id, brokerCustomers[0].name, undefined, quoteTypeStr);
         }
         this.loading.set(false);
       },

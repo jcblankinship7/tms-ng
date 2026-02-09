@@ -85,6 +85,8 @@ export interface Quote {
   beneficialOwnerName?: string;
   brokerCustomerId?: number;  // Broker facilitating the quote
   brokerCustomerName?: string;
+  status?: string;
+  message?: string;
 }
 
 // Terminal locations (for rail moves)

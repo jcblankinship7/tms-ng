@@ -14,7 +14,7 @@ export enum ProviderType {
 
 export enum QuoteType {
   Spot = 1,
-  Customer = 2
+  Custom = 2
 }
 
 export type CustomerStatus = 'active' | 'inactive';
