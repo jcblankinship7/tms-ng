@@ -1,0 +1,56 @@
+<div class="min-h-screen bg-gray-50">
+  <div class="max-w-4xl mx-auto p-6">
+    <div class="bg-white shadow rounded-lg p-6">
+      <h2 class="text-2xl font-bold text-gray-900 mb-4">Confirm Order Details</h2>
+
+      @if (errorMessage()) {
+        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          {{ errorMessage() }}
+        </div>
+      }
+
+      @if (!state()) {
+        <p class="text-gray-600">Loading confirmation details...</p>
+      } @else {
+        <div class="grid grid-cols-1 gap-6">
+          <div class="border rounded-lg p-4">
+            <h3 class="text-lg font-semibold text-gray-800 mb-2">Origin</h3>
+            <div class="text-sm text-gray-700">
+              <div><span class="font-medium">Name:</span> {{ origin?.name || '—' }}</div>
+              <div><span class="font-medium">Address:</span> {{ origin?.address || '—' }}</div>
+              <div><span class="font-medium">City/State/Zip:</span> {{ origin?.city }}, {{ origin?.state }} {{ origin?.zip }}</div>
+            </div>
+          </div>
+
+          <div class="border rounded-lg p-4">
+            <h3 class="text-lg font-semibold text-gray-800 mb-2">Destination</h3>
+            <div class="text-sm text-gray-700">
+              <div><span class="font-medium">Name:</span> {{ destination?.name || '—' }}</div>
+              <div><span class="font-medium">Address:</span> {{ destination?.address || '—' }}</div>
+              <div><span class="font-medium">City/State/Zip:</span> {{ destination?.city }}, {{ destination?.state }} {{ destination?.zip }}</div>
+            </div>
+          </div>
+
+          <div class="border rounded-lg p-4">
+            <h3 class="text-lg font-semibold text-gray-800 mb-2">Appointments</h3>
+            <div class="text-sm text-gray-700">
+              <div><span class="font-medium">Pickup Date:</span> {{ appointmentDetails?.pickupAppointmentDate || '—' }}</div>
+              <div><span class="font-medium">Pickup Time:</span> {{ appointmentDetails?.pickupAppointmentTime || '—' }}</div>
+              <div><span class="font-medium">Delivery Date:</span> {{ appointmentDetails?.deliveryAppointmentDate || '—' }}</div>
+              <div><span class="font-medium">Delivery Time:</span> {{ appointmentDetails?.deliveryAppointmentTime || '—' }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex gap-3 justify-end mt-6">
+          <button type="button" (click)="goBack()" class="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50">
+            Back
+          </button>
+          <button type="button" (click)="saveOrder()" [disabled]="loading()" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
+            {{ loading() ? 'Saving...' : 'Save Order' }}
+          </button>
+        </div>
+      }
+    </div>
+  </div>
+</div>

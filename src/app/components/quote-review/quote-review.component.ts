@@ -2,6 +2,7 @@ import { Component, OnInit, signal } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { QuoteService } from '../../services/quote.service';
+import { AddressLookupService, AddressSuggestion } from '../../services/address-lookup.service';
 import { OrderService } from '../../services/order.service';
 import { AuthService } from '../../services/auth.service';
 import { ToastService } from '../../services/toast.service';
@@ -23,6 +24,34 @@ export class QuoteReviewComponent implements OnInit {
   isCustomerPersona = signal(false);
   isAdminOrMarketingManager = signal(false);
 
+  // Address verification UI signals
+  originAddress = signal<string>('');
+  originSuggestions = signal<AddressSuggestion[]>([]);
+  showOriginSuggestions = signal(false);
+  originVerified = signal<boolean | null>(null);
+  originTopSuggestion = signal<AddressSuggestion | null>(null);
+  originSelectedSuggestion = signal<AddressSuggestion | null>(null);
+
+  destinationAddress = signal<string>('');
+  destinationSuggestions = signal<AddressSuggestion[]>([]);
+  showDestinationSuggestions = signal(false);
+  destinationVerified = signal<boolean | null>(null);
+  destinationTopSuggestion = signal<AddressSuggestion | null>(null);
+  destinationSelectedSuggestion = signal<AddressSuggestion | null>(null);
+
+  // Extra pickup/delivery per-move state (keyed by move index)
+  extraPickupAddresses = signal<{[index:number]: string}>({});
+  extraPickupSuggestions = signal<{[index:number]: AddressSuggestion[]}>({});
+  extraPickupVerified = signal<{[index:number]: boolean|null}>({});
+  extraPickupTopSuggestion = signal<{[index:number]: AddressSuggestion|null}>({});
+  extraPickupSelected = signal<{[index:number]: AddressSuggestion|null}>({});
+
+  extraDeliveryAddresses = signal<{[index:number]: string}>({});
+  extraDeliverySuggestions = signal<{[index:number]: AddressSuggestion[]}>({});
+  extraDeliveryVerified = signal<{[index:number]: boolean|null}>({});
+  extraDeliveryTopSuggestion = signal<{[index:number]: AddressSuggestion|null}>({});
+  extraDeliverySelected = signal<{[index:number]: AddressSuggestion|null}>({});
+
   constructor(
     private quoteService: QuoteService,
     private orderService: OrderService,
@@ -30,7 +59,8 @@ export class QuoteReviewComponent implements OnInit {
     private toastService: ToastService,
     private router: Router,
     private route: ActivatedRoute,
-    private customerService: CustomerService
+    private customerService: CustomerService,
+    private addressLookup: AddressLookupService
   ) {
     const navigation = this.router.getCurrentNavigation();
     if (navigation?.extras?.state && navigation.extras.state['quote']) {
@@ -63,16 +93,329 @@ export class QuoteReviewComponent implements OnInit {
       }
     }
 
+      // Initialize local address fields from quote for in-page verification
+    const q = this.quote();
+    if (q && q.moves && q.moves.length > 0) {
+      const origin = q.moves[0].origin;
+      const dest = q.moves[q.moves.length - 1].destination;
+      this.originAddress.set(origin?.address || '');
+      this.destinationAddress.set(dest?.address || '');
+
+      // Initialize extra pickup/delivery fields (use first extra if present)
+      q.moves.forEach((m: any, idx: number) => {
+        if ((m.moveType || '').toLowerCase() === 'extrapickup') {
+          const map = this.extraPickupAddresses();
+          map[idx] = m.origin?.address || '';
+          this.extraPickupAddresses.set(map);
+        }
+        if ((m.moveType || '').toLowerCase() === 'extradelivery') {
+          const mapD = this.extraDeliveryAddresses();
+          mapD[idx] = m.destination?.address || '';
+          this.extraDeliveryAddresses.set(mapD);
+        }
+      });
+    }
+
     // Check user persona
     const persona = this.authService.getPersona();
     this.isCustomerPersona.set(persona === 'Customer');
     this.isAdminOrMarketingManager.set(persona === 'Admin' || persona === 'MarketingManager');
   }
 
+  private addressTokens(s: string | null | undefined): string[] {
+    return ((s || '').toLowerCase().match(/\w+/g) || []);
+  }
+
+  private allAddressTokensPresent(input: string | null | undefined, candidate: string | null | undefined): boolean {
+    const tokens = this.addressTokens(input);
+    if (!tokens || tokens.length === 0) return false;
+    const cand = (candidate || '').toLowerCase();
+    return tokens.every(t => cand.includes(t));
+  }
+
+  private matchesQuoteLocation(s: AddressSuggestion, qCity: string | null, qState: string | null, qZip: string | null): boolean {
+    if ((!qCity || qCity.trim() === '') && (!qState || qState.trim() === '') && (!qZip || qZip.trim() === '')) return true;
+    const cityMatch = qCity ? (s.city || '').toLowerCase() === qCity.toLowerCase() : true;
+    const stateMatch = qState ? (s.state || '').toLowerCase() === qState.toLowerCase() : true;
+    const zipMatch = qZip ? (s.zip || '') === qZip : true;
+    return cityMatch && stateMatch && zipMatch;
+  }
+
+  onOriginAddressInput(event: any): void {
+    const address = event.target.value;
+    this.originAddress.set(address);
+    const q = this.quote();
+    const city = q?.moves && q.moves.length > 0 ? q.moves[0].origin.city : '';
+    const state = q?.moves && q.moves.length > 0 ? q.moves[0].origin.state : '';
+    const zip = q?.moves && q.moves.length > 0 ? q.moves[0].origin.zip : '';
+
+    if (address && address.length >= 3) {
+      this.addressLookup.searchAddresses(address).subscribe(suggestions => {
+        const filtered = suggestions.filter(s => this.matchesQuoteLocation(s, city || null, state || null, zip || null));
+        this.originSuggestions.set(filtered);
+        this.showOriginSuggestions.set(filtered.length > 0);
+      });
+    } else {
+      this.originSuggestions.set([]);
+      this.showOriginSuggestions.set(false);
+    }
+  }
+
+  selectOriginSuggestion(suggestion: AddressSuggestion | null): void {
+    if (!suggestion) return;
+    this.originAddress.set(suggestion.displayName || suggestion.address);
+    this.originVerified.set(true);
+    this.originTopSuggestion.set(null);
+    this.originSelectedSuggestion.set(suggestion);
+    this.originSuggestions.set([]);
+    this.showOriginSuggestions.set(false);
+  }
+
+  verifyOriginAddress(): void {
+    const address = this.originAddress();
+    if (!address || address.length < 3) {
+      this.originVerified.set(false);
+      this.originTopSuggestion.set(null);
+      return;
+    }
+
+    const q = this.quote();
+    const city = q?.moves && q.moves.length > 0 ? q.moves[0].origin.city : '';
+    const state = q?.moves && q.moves.length > 0 ? q.moves[0].origin.state : '';
+    const zip = q?.moves && q.moves.length > 0 ? q.moves[0].origin.zip : '';
+
+    this.addressLookup.searchAddresses(address).subscribe(results => {
+      const filtered = results.filter((r: AddressSuggestion) => this.matchesQuoteLocation(r, city || null, state || null, zip || null));
+
+      // show full suggestion list
+      this.originSuggestions.set(filtered || []);
+      this.showOriginSuggestions.set((filtered && filtered.length > 0));
+
+      if (filtered && filtered.length > 0) {
+        const top = filtered[0];
+        const addrMatches = this.allAddressTokensPresent(address, top.displayName) || this.allAddressTokensPresent(address, top.address);
+        if (addrMatches) {
+          // strong match -> auto-select and prefer displayName
+          this.originAddress.set(top.displayName || top.address);
+          this.originVerified.set(true);
+          this.originTopSuggestion.set(null);
+          this.originSelectedSuggestion.set(top);
+          this.originSuggestions.set([]);
+          this.showOriginSuggestions.set(false);
+        } else {
+          // weak match -> surface list and set gentle top hint
+          this.originVerified.set(false);
+          this.originTopSuggestion.set(top);
+        }
+      } else {
+        this.originVerified.set(false);
+        this.originTopSuggestion.set(null);
+        this.originSuggestions.set([]);
+        this.showOriginSuggestions.set(false);
+      }
+    }, () => {
+      this.originVerified.set(false);
+      this.originTopSuggestion.set(null);
+      this.originSuggestions.set([]);
+      this.showOriginSuggestions.set(false);
+    });
+  }
+
+  onDestinationAddressInput(event: any): void {
+    const address = event.target.value;
+    this.destinationAddress.set(address);
+    const q = this.quote();
+    const city = q?.moves && q.moves.length > 0 ? q.moves[q.moves.length - 1].destination.city : '';
+    const state = q?.moves && q.moves.length > 0 ? q.moves[q.moves.length - 1].destination.state : '';
+    const zip = q?.moves && q.moves.length > 0 ? q.moves[q.moves.length - 1].destination.zip : '';
+
+    if (address && address.length >= 3) {
+      this.addressLookup.searchAddresses(address).subscribe(suggestions => {
+        const filtered = suggestions.filter(s => this.matchesQuoteLocation(s, city || null, state || null, zip || null));
+        this.destinationSuggestions.set(filtered);
+        this.showDestinationSuggestions.set(filtered.length > 0);
+      });
+    } else {
+      this.destinationSuggestions.set([]);
+      this.showDestinationSuggestions.set(false);
+    }
+  }
+
+  // Extra pickup handlers (indexed by move index)
+  onExtraPickupAddressInput(index: number, event: any): void {
+    const address = event.target.value;
+    const map = { ...this.extraPickupAddresses() };
+    map[index] = address;
+    this.extraPickupAddresses.set(map);
+
+    if (address && address.length >= 3) {
+      this.addressLookup.searchAddresses(address).subscribe(suggestions => {
+        this.extraPickupSuggestions.set({ ...this.extraPickupSuggestions(), [index]: suggestions });
+      });
+    } else {
+      this.extraPickupSuggestions.set({ ...this.extraPickupSuggestions(), [index]: [] });
+    }
+  }
+
+  verifyExtraPickupAddress(index: number): void {
+    const address = (this.extraPickupAddresses() || {})[index];
+    if (!address || address.length < 3) {
+      this.extraPickupVerified.set({ ...this.extraPickupVerified(), [index]: false });
+      this.extraPickupTopSuggestion.set({ ...this.extraPickupTopSuggestion(), [index]: null });
+      return;
+    }
+
+    // Use quote move's origin location to constrain
+    const q = this.quote();
+    const move = q?.moves && q.moves[index] ? q.moves[index] : null;
+    const city = move?.origin?.city || null;
+    const state = move?.origin?.state || null;
+    const zip = move?.origin?.zip || null;
+
+    this.addressLookup.searchAddresses(address).subscribe(results => {
+      const filtered = results.filter((r: AddressSuggestion) => this.matchesQuoteLocation(r, city, state, zip));
+      if (filtered && filtered.length > 0) {
+        const top = filtered[0];
+        const addrMatches = this.allAddressTokensPresent(address, top.displayName) || this.allAddressTokensPresent(address, top.address);
+        if (addrMatches) {
+          // select
+          this.extraPickupSelected.set({ ...this.extraPickupSelected(), [index]: top });
+          this.extraPickupAddresses.set({ ...this.extraPickupAddresses(), [index]: top.displayName || top.address });
+          this.extraPickupVerified.set({ ...this.extraPickupVerified(), [index]: true });
+          this.extraPickupTopSuggestion.set({ ...this.extraPickupTopSuggestion(), [index]: null });
+        } else {
+          this.extraPickupVerified.set({ ...this.extraPickupVerified(), [index]: false });
+          this.extraPickupTopSuggestion.set({ ...this.extraPickupTopSuggestion(), [index]: top });
+        }
+      } else {
+        this.extraPickupVerified.set({ ...this.extraPickupVerified(), [index]: false });
+        this.extraPickupTopSuggestion.set({ ...this.extraPickupTopSuggestion(), [index]: null });
+      }
+    }, () => {
+      this.extraPickupVerified.set({ ...this.extraPickupVerified(), [index]: false });
+      this.extraPickupTopSuggestion.set({ ...this.extraPickupTopSuggestion(), [index]: null });
+    });
+  }
+
+  selectExtraPickupSuggestion(index: number, suggestion: AddressSuggestion | null): void {
+    if (!suggestion) return;
+    this.extraPickupSelected.set({ ...this.extraPickupSelected(), [index]: suggestion });
+    this.extraPickupAddresses.set({ ...this.extraPickupAddresses(), [index]: suggestion.displayName || suggestion.address });
+    this.extraPickupVerified.set({ ...this.extraPickupVerified(), [index]: true });
+    this.extraPickupTopSuggestion.set({ ...this.extraPickupTopSuggestion(), [index]: null });
+    this.extraPickupSuggestions.set({ ...this.extraPickupSuggestions(), [index]: [] });
+  }
+
+  // Extra delivery handlers (indexed by move index)
+  onExtraDeliveryAddressInput(index: number, event: any): void {
+    const address = event.target.value;
+    const map = { ...this.extraDeliveryAddresses() };
+    map[index] = address;
+    this.extraDeliveryAddresses.set(map);
+
+    if (address && address.length >= 3) {
+      this.addressLookup.searchAddresses(address).subscribe(suggestions => {
+        this.extraDeliverySuggestions.set({ ...this.extraDeliverySuggestions(), [index]: suggestions });
+      });
+    } else {
+      this.extraDeliverySuggestions.set({ ...this.extraDeliverySuggestions(), [index]: [] });
+    }
+  }
+
+  verifyExtraDeliveryAddress(index: number): void {
+    const address = (this.extraDeliveryAddresses() || {})[index];
+    if (!address || address.length < 3) {
+      this.extraDeliveryVerified.set({ ...this.extraDeliveryVerified(), [index]: false });
+      this.extraDeliveryTopSuggestion.set({ ...this.extraDeliveryTopSuggestion(), [index]: null });
+      return;
+    }
+
+    const q = this.quote();
+    const move = q?.moves && q.moves[index] ? q.moves[index] : null;
+    const city = move?.destination?.city || null;
+    const state = move?.destination?.state || null;
+    const zip = move?.destination?.zip || null;
+
+    this.addressLookup.searchAddresses(address).subscribe(results => {
+      const filtered = results.filter((r: AddressSuggestion) => this.matchesQuoteLocation(r, city, state, zip));
+      if (filtered && filtered.length > 0) {
+        const top = filtered[0];
+        const addrMatches = this.allAddressTokensPresent(address, top.displayName) || this.allAddressTokensPresent(address, top.address);
+        if (addrMatches) {
+          this.extraDeliverySelected.set({ ...this.extraDeliverySelected(), [index]: top });
+          this.extraDeliveryAddresses.set({ ...this.extraDeliveryAddresses(), [index]: top.displayName || top.address });
+          this.extraDeliveryVerified.set({ ...this.extraDeliveryVerified(), [index]: true });
+          this.extraDeliveryTopSuggestion.set({ ...this.extraDeliveryTopSuggestion(), [index]: null });
+        } else {
+          this.extraDeliveryVerified.set({ ...this.extraDeliveryVerified(), [index]: false });
+          this.extraDeliveryTopSuggestion.set({ ...this.extraDeliveryTopSuggestion(), [index]: top });
+        }
+      } else {
+        this.extraDeliveryVerified.set({ ...this.extraDeliveryVerified(), [index]: false });
+        this.extraDeliveryTopSuggestion.set({ ...this.extraDeliveryTopSuggestion(), [index]: null });
+      }
+    }, () => {
+      this.extraDeliveryVerified.set({ ...this.extraDeliveryVerified(), [index]: false });
+      this.extraDeliveryTopSuggestion.set({ ...this.extraDeliveryTopSuggestion(), [index]: null });
+    });
+  }
+
+  selectExtraDeliverySuggestion(index: number, suggestion: AddressSuggestion | null): void {
+    if (!suggestion) return;
+    this.extraDeliverySelected.set({ ...this.extraDeliverySelected(), [index]: suggestion });
+    this.extraDeliveryAddresses.set({ ...this.extraDeliveryAddresses(), [index]: suggestion.displayName || suggestion.address });
+    this.extraDeliveryVerified.set({ ...this.extraDeliveryVerified(), [index]: true });
+    this.extraDeliveryTopSuggestion.set({ ...this.extraDeliveryTopSuggestion(), [index]: null });
+    this.extraDeliverySuggestions.set({ ...this.extraDeliverySuggestions(), [index]: [] });
+  }
+
+  selectDestinationSuggestion(suggestion: AddressSuggestion | null): void {
+    if (!suggestion) return;
+    this.destinationAddress.set(suggestion.displayName || suggestion.address);
+    this.destinationVerified.set(true);
+    this.destinationTopSuggestion.set(null);
+    this.destinationSelectedSuggestion.set(suggestion);
+    this.destinationSuggestions.set([]);
+    this.showDestinationSuggestions.set(false);
+  }
+
+  verifyDestinationAddress(): void {
+    const address = this.destinationAddress();
+    if (!address || address.length < 3) {
+      this.destinationVerified.set(false);
+      this.destinationTopSuggestion.set(null);
+      return;
+    }
+
+    const q = this.quote();
+    const city = q?.moves && q.moves.length > 0 ? q.moves[q.moves.length - 1].destination.city : '';
+    const state = q?.moves && q.moves.length > 0 ? q.moves[q.moves.length - 1].destination.state : '';
+    const zip = q?.moves && q.moves.length > 0 ? q.moves[q.moves.length - 1].destination.zip : '';
+
+    this.addressLookup.searchAddresses(address).subscribe(results => {
+      const filtered = results.filter((r: AddressSuggestion) => this.matchesQuoteLocation(r, city || null, state || null, zip || null));
+      if (filtered && filtered.length > 0) {
+        const top = filtered[0];
+        const addrMatches = this.allAddressTokensPresent(address, top.displayName) || this.allAddressTokensPresent(address, top.address);
+        if (addrMatches) {
+          this.selectDestinationSuggestion(top);
+        } else {
+          this.destinationVerified.set(false);
+          this.destinationTopSuggestion.set(top);
+        }
+      } else {
+        this.destinationVerified.set(false);
+        this.destinationTopSuggestion.set(null);
+      }
+    }, () => {
+      this.destinationVerified.set(false);
+      this.destinationTopSuggestion.set(null);
+    });
+  }
+
   acceptQuote(): void {
     const currentQuote = this.quote();
     if (!currentQuote) return;
-
     // Only customers can create orders
     if (!this.isCustomerPersona()) {
       this.errorMessage.set('Only customers can create orders. Please log in as a customer or contact your broker.');
@@ -84,16 +427,131 @@ export class QuoteReviewComponent implements OnInit {
       return;
     }
 
-    // Navigate to accept-quote flow so user can fill appointment details
+    // Build navigation state including verified addresses when present
     const id = (currentQuote as any).id;
+    const navState: any = { quote: currentQuote };
+
+    // Attach verified origin if present
+    if (this.originVerified() === true) {
+      const originSuggestion = this.originSelectedSuggestion();
+      const originData: any = {
+        address: this.originAddress()
+      };
+      if (originSuggestion) {
+        originData.city = originSuggestion.city;
+        originData.state = originSuggestion.state;
+        originData.zip = originSuggestion.zip;
+        originData.position = originSuggestion.position || null;
+      } else {
+        // Fallback to quote's origin fields
+        originData.city = (currentQuote as any).moves && (currentQuote as any).moves.length > 0 ? (currentQuote as any).moves[0].origin.city : '';
+        originData.state = (currentQuote as any).moves && (currentQuote as any).moves.length > 0 ? (currentQuote as any).moves[0].origin.state : '';
+        originData.zip = (currentQuote as any).moves && (currentQuote as any).moves.length > 0 ? (currentQuote as any).moves[0].origin.zip : '';
+      }
+      navState.verifiedAddresses = navState.verifiedAddresses || {};
+      navState.verifiedAddresses.origin = originData;
+    }
+
+    // Attach verified destination if present
+    if (this.destinationVerified() === true) {
+      const destSuggestion = this.destinationSelectedSuggestion();
+      const destData: any = {
+        address: this.destinationAddress()
+      };
+      if (destSuggestion) {
+        destData.city = destSuggestion.city;
+        destData.state = destSuggestion.state;
+        destData.zip = destSuggestion.zip;
+        destData.position = destSuggestion.position || null;
+      } else {
+        destData.city = (currentQuote as any).moves && (currentQuote as any).moves.length > 0 ? (currentQuote as any).moves[(currentQuote as any).moves.length - 1].destination.city : '';
+        destData.state = (currentQuote as any).moves && (currentQuote as any).moves.length > 0 ? (currentQuote as any).moves[(currentQuote as any).moves.length - 1].destination.state : '';
+        destData.zip = (currentQuote as any).moves && (currentQuote as any).moves.length > 0 ? (currentQuote as any).moves[(currentQuote as any).moves.length - 1].destination.zip : '';
+      }
+      navState.verifiedAddresses = navState.verifiedAddresses || {};
+      navState.verifiedAddresses.destination = destData;
+    }
+
+    // Attach verified extra pickup/delivery (first verified of each type if present)
+    const extraPickups = Object.keys(this.extraPickupVerified() || {}).map(k => parseInt(k, 10)).filter(i => this.extraPickupVerified()[i] === true);
+    if (extraPickups.length > 0) {
+      const first = extraPickups[0];
+      const sel = (this.extraPickupSelected() || {})[first] as AddressSuggestion | null;
+      const data: any = {
+        address: (this.extraPickupAddresses() || {})[first] || ''
+      };
+      if (sel) {
+        data.city = sel.city; data.state = sel.state; data.zip = sel.zip; data.position = sel.position || null;
+      } else {
+        const m = (currentQuote as any).moves && (currentQuote as any).moves[first] ? (currentQuote as any).moves[first] : null;
+        data.city = m?.origin?.city || ''; data.state = m?.origin?.state || ''; data.zip = m?.origin?.zip || '';
+      }
+      navState.verifiedAddresses = navState.verifiedAddresses || {};
+      navState.verifiedAddresses.extraPickup = data;
+    }
+
+    const extraDeliveries = Object.keys(this.extraDeliveryVerified() || {}).map(k => parseInt(k, 10)).filter(i => this.extraDeliveryVerified()[i] === true);
+    if (extraDeliveries.length > 0) {
+      const first = extraDeliveries[0];
+      const sel = (this.extraDeliverySelected() || {})[first] as AddressSuggestion | null;
+      const data: any = {
+        address: (this.extraDeliveryAddresses() || {})[first] || ''
+      };
+      if (sel) {
+        data.city = sel.city; data.state = sel.state; data.zip = sel.zip; data.position = sel.position || null;
+      } else {
+        const m = (currentQuote as any).moves && (currentQuote as any).moves[first] ? (currentQuote as any).moves[first] : null;
+        data.city = m?.destination?.city || ''; data.state = m?.destination?.state || ''; data.zip = m?.destination?.zip || '';
+      }
+      navState.verifiedAddresses = navState.verifiedAddresses || {};
+      navState.verifiedAddresses.extraDelivery = data;
+    }
+
     if (id) {
-      this.router.navigate(['/customer/accept-quote', id], { state: { quote: currentQuote } });
+      this.router.navigate(['/customer/accept-quote', id], { state: navState });
     } else {
       // Preview-only quote: pass via navigation state
-      this.router.navigate(['/customer/accept-quote'], { state: { quote: currentQuote } });
+      this.router.navigate(['/customer/accept-quote'], { state: navState });
     }
   }
 
+  holdQuote(): void {
+    const currentQuote = this.quote();
+    if (!currentQuote) return;
+
+    // Only customers can hold quotes
+    if (!this.isCustomerPersona()) {
+      this.errorMessage.set('Only customers can hold quotes.');
+      return;
+    }
+
+    if (!currentQuote.id) {
+      this.errorMessage.set('Cannot hold a quote without an ID. Please try again.');
+      return;
+    }
+
+    this.loading.set(true);
+    this.quoteService.holdQuote(currentQuote.id).subscribe({
+      next: (response) => {
+        this.loading.set(false);
+        this.toastService.show('Quote held successfully. Price locked.');
+        
+        // Update the quote status to "On Hold"
+        const updated = { ...currentQuote, status: 'On Hold' };
+        this.quote.set(updated);
+        
+        // Navigate to quotes list after a brief delay so user can see the success message
+        setTimeout(() => {
+          this.router.navigate(['/customer/quotes'], { queryParams: { status: 'On Hold' } });
+        }, 1500);
+      },
+      error: (err) => {
+        console.error('Error holding quote:', err);
+        this.errorMessage.set(err?.error?.message || 'Failed to hold quote. Please try again.');
+        this.loading.set(false);
+      }
+    });
+  }
 
   // Save the current preview as a server-side draft
   saveAsDraft(): void {

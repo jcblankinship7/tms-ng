@@ -5,7 +5,7 @@ import { Move, MoveType } from '../models/order.model';
 
 export interface Stop {
   id: string;
-  terminalName: string;
+  Name: string;
   stopType: 'Stay' | 'Drop';
   arrivalAt?: string;
   departedAt?: string;
@@ -20,7 +20,7 @@ export class MoveService {
       id: 'MOV-001',
       orderNumber: 'ORD-001',
       moveOrder: 1,
-      moveType: MoveType.RAIL_MOVE,
+      moveType: MoveType.RAIL,
       origin: {
         zip: '10001',
         address: 'Northeast Terminal - NY'
@@ -46,7 +46,7 @@ export class MoveService {
       id: 'MOV-002',
       orderNumber: 'ORD-001',
       moveOrder: 2,
-      moveType: MoveType.FINAL_DELIVERY,
+      moveType: MoveType.FINAL_DESTINATION,
       origin: {
         zip: '30303',
         address: 'Southeast Terminal - GA'
@@ -71,7 +71,7 @@ export class MoveService {
       id: 'MOV-003',
       orderNumber: 'ORD-002',
       moveOrder: 1,
-      moveType: MoveType.ORIGIN_PICKUP,
+      moveType: MoveType.INITIAL_PICKUP,
       origin: {
         zip: '90001',
         address: 'West Coast Hub - CA'

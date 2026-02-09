@@ -115,6 +115,13 @@
 
         </div>
       </div>
+
+      <div class="mt-4">
+        <button (click)="generateCustomQuote()" [disabled]="loading() || !selectedOrigin() || !selectedDestination()"
+          class="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium text-lg transition-colors">
+          {{ loading() ? 'Requesting...' : 'Request Custom Quote' }}
+        </button>
+      </div>
       }
 
       <!-- SPOT QUOTE FORM -->
@@ -354,263 +361,253 @@
               }
             </div>
           </div>
-        </div>
 
-        <div class="space-y-6">
-          <!-- FINAL DELIVERY LOCATION -->
-          <div class="space-y-3">
-            <label class="block text-sm font-semibold text-gray-700">Final Delivery Location <span
-                class="text-red-500">*</span></label>
+          <div class="space-y-6">
+            <!-- FINAL DELIVERY LOCATION -->
+            <div class="space-y-3">
+              <label class="block text-sm font-semibold text-gray-700">Final Delivery Location <span
+                  class="text-red-500">*</span></label>
 
-            <!-- Input Type Toggle -->
-            <div class="flex gap-2 mb-2">
-              <button type="button" (click)="onDestinationInputTypeChange('zipcode')"
-                [class.bg-blue-600]="destinationInputType() === 'zipcode'"
-                [class.text-white]="destinationInputType() === 'zipcode'"
-                [class.bg-gray-200]="destinationInputType() !== 'zipcode'"
-                [class.text-gray-700]="destinationInputType() !== 'zipcode'"
-                class="px-3 py-1 rounded text-sm font-medium">
-                Zip Code
-              </button>
-              <button type="button" (click)="onDestinationInputTypeChange('citystate')"
-                [class.bg-blue-600]="destinationInputType() === 'citystate'"
-                [class.text-white]="destinationInputType() === 'citystate'"
-                [class.bg-gray-200]="destinationInputType() !== 'citystate'"
-                [class.text-gray-700]="destinationInputType() !== 'citystate'"
-                class="px-3 py-1 rounded text-sm font-medium">
-                City, State
-              </button>
-            </div>
-
-            <!-- Zip Code Input -->
-            @if (destinationInputType() === 'zipcode') {
-            <div class="relative">
-              <input type="text" [ngModel]="destinationZipCode()" (ngModelChange)="onDestinationZipCodeChange($event)"
-                maxlength="10"
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Enter zip code (e.g., 33101)" />
-              @if (destinationSearching()) {
-              <div class="absolute right-3 top-3 text-gray-400">
-                <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor"
-                    d="M4 12a8 8 0 1 0 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-                  </path>
-                </svg>
+              <!-- Input Type Toggle -->
+              <div class="flex gap-2 mb-2">
+                <button type="button" (click)="onDestinationInputTypeChange('zipcode')"
+                  [class.bg-blue-600]="destinationInputType() === 'zipcode'"
+                  [class.text-white]="destinationInputType() === 'zipcode'"
+                  [class.bg-gray-200]="destinationInputType() !== 'zipcode'"
+                  [class.text-gray-700]="destinationInputType() !== 'zipcode'"
+                  class="px-3 py-1 rounded text-sm font-medium">
+                  Zip Code
+                </button>
+                <button type="button" (click)="onDestinationInputTypeChange('citystate')"
+                  [class.bg-blue-600]="destinationInputType() === 'citystate'"
+                  [class.text-white]="destinationInputType() === 'citystate'"
+                  [class.bg-gray-200]="destinationInputType() !== 'citystate'"
+                  [class.text-gray-700]="destinationInputType() !== 'citystate'"
+                  class="px-3 py-1 rounded text-sm font-medium">
+                  City, State
+                </button>
               </div>
-              }
-            </div>
-            }
 
-            <!-- City/State Input -->
-            @if (destinationInputType() === 'citystate') {
-            <div class="relative">
-              <input type="text" [ngModel]="destinationCityState()"
-                (ngModelChange)="onDestinationCityStateChange($event)"
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Enter city and state (e.g., Miami, FL)" />
-              @if (destinationSearching()) {
-              <div class="absolute right-3 top-3 text-gray-400">
-                <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor"
-                    d="M4 12a8 8 0 1 0 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-                  </path>
-                </svg>
-              </div>
-              }
-            </div>
-            }
-
-            <!-- Search Results Dropdown -->
-            @if (destinationShowResults() && destinationSearchResults().length > 0) {
-            <div class="border border-gray-300 rounded-lg mt-1 max-h-60 overflow-y-auto bg-white shadow-lg">
-              @for (result of destinationSearchResults(); track result.id) {
-              <button type="button" (click)="selectDestinationLocation(result)"
-                class="w-full text-left px-4 py-2 hover:bg-blue-50 border-b border-gray-100 last:border-b-0">
-                <div class="font-medium text-gray-900">{{ result.displayName }}</div>
-                <div class="text-sm text-gray-600">
-                  {{ result.city }}, {{ result.stateCode }} {{ result.zipCode }}
+              <!-- Zip Code Input -->
+              @if (destinationInputType() === 'zipcode') {
+              <div class="relative">
+                <input type="text" [ngModel]="destinationZipCode()" (ngModelChange)="onDestinationZipCodeChange($event)"
+                  maxlength="10"
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Enter zip code (e.g., 33101)" />
+                @if (destinationSearching()) {
+                <div class="absolute right-3 top-3 text-gray-400">
+                  <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor"
+                      d="M4 12a8 8 0 1 0 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                    </path>
+                  </svg>
                 </div>
-              </button>
-              }
-            </div>
-            }
-
-            <!-- Selected Destination Display -->
-            @if (selectedDestination()) {
-            <div class="bg-green-50 border border-green-200 rounded-lg p-3 flex items-start gap-2">
-              <svg class="w-5 h-5 text-green-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-              </svg>
-              <div class="flex-1">
-                <div class="font-medium text-gray-900">{{ selectedDestination()!.city }}, {{
-                  selectedDestination()!.state }}</div>
-                <div class="text-sm text-gray-600">Zip: {{ selectedDestination()!.zipCode }}</div>
-              </div>
-            </div>
-            }
-          </div>
-
-          <!-- DESTINATION STOP TYPE PREFERENCE -->
-          <div class="space-y-3 bg-blue-50 rounded-lg p-4 border border-blue-200">
-            <label class="block text-sm font-semibold text-gray-700">Destination Stop Type</label>
-            <div class="flex gap-4">
-              <label class="flex items-center gap-2 cursor-pointer">
-                <input type="radio" name="destinationStopType" value="Stay" [checked]="destinationStopType() === 'Stay'"
-                  (change)="destinationStopType.set('Stay')" class="w-4 h-4" />
-                <span class="text-sm text-gray-700">Stay</span>
-              </label>
-              <label class="flex items-center gap-2 cursor-pointer">
-                <input type="radio" name="destinationStopType" value="Drop" [checked]="destinationStopType() === 'Drop'"
-                  (change)="destinationStopType.set('Drop')" class="w-4 h-4" />
-                <span class="text-sm text-gray-700">Drop</span>
-              </label>
-            </div>
-          </div>
-
-          <!-- EXTRA DELIVERY LOCATION (Optional) -->
-          <div class="space-y-3 bg-purple-50 rounded-lg p-4 border border-purple-200">
-            <div class="flex items-center justify-between">
-              <label class="block text-sm font-semibold text-gray-700">Extra Delivery Location (Optional)</label>
-              <button type="button" (click)="showExtraDestination.set(!showExtraDestination())"
-                class="text-sm text-blue-600 hover:text-blue-800 font-medium">
-                {{ showExtraDestination() ? 'Hide' : 'Add Extra Stop' }}
-              </button>
-            </div>
-
-            @if (showExtraDestination()) {
-            <!-- Input Type Toggle -->
-            <div class="flex gap-2 mb-2">
-              <button type="button" (click)="onExtraDestinationInputTypeChange('zipcode')"
-                [class.bg-blue-600]="extraDestinationInputType() === 'zipcode'"
-                [class.text-white]="extraDestinationInputType() === 'zipcode'"
-                [class.bg-gray-200]="extraDestinationInputType() !== 'zipcode'"
-                [class.text-gray-700]="extraDestinationInputType() !== 'zipcode'"
-                class="px-3 py-1 rounded text-sm font-medium">
-                Zip Code
-              </button>
-              <button type="button" (click)="onExtraDestinationInputTypeChange('citystate')"
-                [class.bg-blue-600]="extraDestinationInputType() === 'citystate'"
-                [class.text-white]="extraDestinationInputType() === 'citystate'"
-                [class.bg-gray-200]="extraDestinationInputType() !== 'citystate'"
-                [class.text-gray-700]="extraDestinationInputType() !== 'citystate'"
-                class="px-3 py-1 rounded text-sm font-medium">
-                City, State
-              </button>
-            </div>
-
-            <!-- Zip Code Input -->
-            @if (extraDestinationInputType() === 'zipcode') {
-            <div class="relative">
-              <input type="text" [ngModel]="extraDestinationZipCode()"
-                (ngModelChange)="onExtraDestinationZipCodeChange($event)" maxlength="10"
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Enter zip code" />
-              @if (extraDestinationSearching()) {
-              <div class="absolute right-3 top-3 text-gray-400">
-                <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor"
-                    d="M4 12a8 8 0 1 0 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-                  </path>
-                </svg>
+                }
               </div>
               }
-            </div>
-            }
 
-            <!-- City/State Input -->
-            @if (extraDestinationInputType() === 'citystate') {
-            <div class="relative">
-              <input type="text" [ngModel]="extraDestinationCityState()"
-                (ngModelChange)="onExtraDestinationCityStateChange($event)"
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Enter city and state" />
-              @if (extraDestinationSearching()) {
-              <div class="absolute right-3 top-3 text-gray-400">
-                <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor"
-                    d="M4 12a8 8 0 1 0 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-                  </path>
-                </svg>
-              </div>
-              }
-            </div>
-            }
-
-            <!-- Search Results Dropdown -->
-            @if (extraDestinationShowResults() && extraDestinationSearchResults().length > 0) {
-            <div class="border border-gray-300 rounded-lg mt-1 max-h-60 overflow-y-auto bg-white shadow-lg">
-              @for (result of extraDestinationSearchResults(); track result.id) {
-              <button type="button" (click)="selectExtraDestinationLocation(result)"
-                class="w-full text-left px-4 py-2 hover:bg-blue-50 border-b border-gray-100 last:border-b-0">
-                <div class="font-medium text-gray-900">{{ result.displayName }}</div>
-                <div class="text-sm text-gray-600">
-                  {{ result.city }}, {{ result.stateCode }} {{ result.zipCode }}
+              <!-- City/State Input -->
+              @if (destinationInputType() === 'citystate') {
+              <div class="relative">
+                <input type="text" [ngModel]="destinationCityState()"
+                  (ngModelChange)="onDestinationCityStateChange($event)"
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Enter city and state (e.g., Miami, FL)" />
+                @if (destinationSearching()) {
+                <div class="absolute right-3 top-3 text-gray-400">
+                  <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor"
+                      d="M4 12a8 8 0 1 0 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                    </path>
+                  </svg>
                 </div>
-              </button>
+                }
+              </div>
+              }
+
+              <!-- Search Results Dropdown -->
+              @if (destinationShowResults() && destinationSearchResults().length > 0) {
+              <div class="border border-gray-300 rounded-lg mt-1 max-h-60 overflow-y-auto bg-white shadow-lg">
+                @for (result of destinationSearchResults(); track result.id) {
+                <button type="button" (click)="selectDestinationLocation(result)"
+                  class="w-full text-left px-4 py-2 hover:bg-blue-50 border-b border-gray-100 last:border-b-0">
+                  <div class="font-medium text-gray-900">{{ result.displayName }}</div>
+                  <div class="text-sm text-gray-600">
+                    {{ result.city }}, {{ result.stateCode }} {{ result.zipCode }}
+                  </div>
+                </button>
+                }
+              </div>
+              }
+
+              <!-- Selected Destination Display -->
+              @if (selectedDestination()) {
+              <div class="bg-green-50 border border-green-200 rounded-lg p-3 flex items-start gap-2">
+                <svg class="w-5 h-5 text-green-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                <div class="flex-1">
+                  <div class="font-medium text-gray-900">{{ selectedDestination()!.city }}, {{
+                    selectedDestination()!.state }}</div>
+                  <div class="text-sm text-gray-600">Zip: {{ selectedDestination()!.zipCode }}</div>
+                </div>
+              </div>
               }
             </div>
-            }
 
-            <!-- Selected Extra Destination Display -->
-            @if (selectedExtraDestination()) {
-            <div class="bg-green-50 border border-green-200 rounded-lg p-3 flex items-start gap-2">
-              <svg class="w-5 h-5 text-green-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-              </svg>
-              <div class="flex-1">
-                <div class="font-medium text-gray-900">{{ selectedExtraDestination()!.city }}, {{
-                  selectedExtraDestination()!.state }}</div>
-                <div class="text-sm text-gray-600">Zip: {{ selectedExtraDestination()!.zipCode }}</div>
-              </div>
-            </div>
-            }
-
-            <!-- Extra Delivery Stop Type -->
-            <div class="space-y-2 mt-3">
-              <label class="block text-sm font-medium text-gray-700">Extra Delivery Stop Type</label>
+            <!-- DESTINATION STOP TYPE PREFERENCE -->
+            <div class="space-y-3 bg-blue-50 rounded-lg p-4 border border-blue-200">
+              <label class="block text-sm font-semibold text-gray-700">Destination Stop Type</label>
               <div class="flex gap-4">
                 <label class="flex items-center gap-2 cursor-pointer">
-                  <input type="radio" name="extraDestinationStopType" value="Stay"
-                    [checked]="extraDestinationStopType() === 'Stay'" (change)="extraDestinationStopType.set('Stay')"
+                  <input type="radio" name="destinationStopType" value="Stay"
+                    [checked]="destinationStopType() === 'Stay'" (change)="destinationStopType.set('Stay')"
                     class="w-4 h-4" />
                   <span class="text-sm text-gray-700">Stay</span>
                 </label>
                 <label class="flex items-center gap-2 cursor-pointer">
-                  <input type="radio" name="extraDestinationStopType" value="Drop"
-                    [checked]="extraDestinationStopType() === 'Drop'" (change)="extraDestinationStopType.set('Drop')"
+                  <input type="radio" name="destinationStopType" value="Drop"
+                    [checked]="destinationStopType() === 'Drop'" (change)="destinationStopType.set('Drop')"
                     class="w-4 h-4" />
                   <span class="text-sm text-gray-700">Drop</span>
                 </label>
               </div>
             </div>
-            }
+
+            <!-- EXTRA DELIVERY LOCATION (Optional) -->
+            <div class="space-y-3 bg-purple-50 rounded-lg p-4 border border-purple-200">
+              <div class="flex items-center justify-between">
+                <label class="block text-sm font-semibold text-gray-700">Extra Delivery Location (Optional)</label>
+                <button type="button" (click)="showExtraDestination.set(!showExtraDestination())"
+                  class="text-sm text-blue-600 hover:text-blue-800 font-medium">
+                  {{ showExtraDestination() ? 'Hide' : 'Add Extra Stop' }}
+                </button>
+              </div>
+
+              @if (showExtraDestination()) {
+              <!-- Input Type Toggle -->
+              <div class="flex gap-2 mb-2">
+                <button type="button" (click)="onExtraDestinationInputTypeChange('zipcode')"
+                  [class.bg-blue-600]="extraDestinationInputType() === 'zipcode'"
+                  [class.text-white]="extraDestinationInputType() === 'zipcode'"
+                  [class.bg-gray-200]="extraDestinationInputType() !== 'zipcode'"
+                  [class.text-gray-700]="extraDestinationInputType() !== 'zipcode'"
+                  class="px-3 py-1 rounded text-sm font-medium">
+                  Zip Code
+                </button>
+                <button type="button" (click)="onExtraDestinationInputTypeChange('citystate')"
+                  [class.bg-blue-600]="extraDestinationInputType() === 'citystate'"
+                  [class.text-white]="extraDestinationInputType() === 'citystate'"
+                  [class.bg-gray-200]="extraDestinationInputType() !== 'citystate'"
+                  [class.text-gray-700]="extraDestinationInputType() !== 'citystate'"
+                  class="px-3 py-1 rounded text-sm font-medium">
+                  City, State
+                </button>
+              </div>
+
+              <!-- Zip Code Input -->
+              @if (extraDestinationInputType() === 'zipcode') {
+              <div class="relative">
+                <input type="text" [ngModel]="extraDestinationZipCode()"
+                  (ngModelChange)="onExtraDestinationZipCodeChange($event)" maxlength="10"
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Enter zip code" />
+                @if (extraDestinationSearching()) {
+                <div class="absolute right-3 top-3 text-gray-400">
+                  <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor"
+                      d="M4 12a8 8 0 1 0 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                    </path>
+                  </svg>
+                </div>
+                }
+              </div>
+              }
+
+              <!-- City/State Input -->
+              @if (extraDestinationInputType() === 'citystate') {
+              <div class="relative">
+                <input type="text" [ngModel]="extraDestinationCityState()"
+                  (ngModelChange)="onExtraDestinationCityStateChange($event)"
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Enter city and state" />
+                @if (extraDestinationSearching()) {
+                <div class="absolute right-3 top-3 text-gray-400">
+                  <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor"
+                      d="M4 12a8 8 0 1 0 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                    </path>
+                  </svg>
+                </div>
+                }
+              </div>
+              }
+
+              <!-- Search Results Dropdown -->
+              @if (extraDestinationShowResults() && extraDestinationSearchResults().length > 0) {
+              <div class="border border-gray-300 rounded-lg mt-1 max-h-60 overflow-y-auto bg-white shadow-lg">
+                @for (result of extraDestinationSearchResults(); track result.id) {
+                <button type="button" (click)="selectExtraDestinationLocation(result)"
+                  class="w-full text-left px-4 py-2 hover:bg-blue-50 border-b border-gray-100 last:border-b-0">
+                  <div class="font-medium text-gray-900">{{ result.displayName }}</div>
+                  <div class="text-sm text-gray-600">
+                    {{ result.city }}, {{ result.stateCode }} {{ result.zipCode }}
+                  </div>
+                </button>
+                }
+              </div>
+              }
+
+              <!-- Selected Extra Destination Display -->
+              @if (selectedExtraDestination()) {
+              <div class="bg-green-50 border border-green-200 rounded-lg p-3 flex items-start gap-2">
+                <svg class="w-5 h-5 text-green-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                <div class="flex-1">
+                  <div class="font-medium text-gray-900">{{ selectedExtraDestination()!.city }}, {{
+                    selectedExtraDestination()!.state }}</div>
+                  <div class="text-sm text-gray-600">Zip: {{ selectedExtraDestination()!.zipCode }}</div>
+                </div>
+              </div>
+              }
+
+              <!-- Extra Delivery Stop Type -->
+              <div class="space-y-2 mt-3">
+                <label class="block text-sm font-medium text-gray-700">Extra Delivery Stop Type</label>
+                <div class="flex gap-4">
+                  <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" name="extraDestinationStopType" value="Stay"
+                      [checked]="extraDestinationStopType() === 'Stay'" (change)="extraDestinationStopType.set('Stay')"
+                      class="w-4 h-4" />
+                    <span class="text-sm text-gray-700">Stay</span>
+                  </label>
+                  <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" name="extraDestinationStopType" value="Drop"
+                      [checked]="extraDestinationStopType() === 'Drop'" (change)="extraDestinationStopType.set('Drop')"
+                      class="w-4 h-4" />
+                    <span class="text-sm text-gray-700">Drop</span>
+                  </label>
+                </div>
+              </div>
+              }
+            </div>
           </div>
         </div>
+
+        <div class="mt-4">
+          <button (click)="generateSpotQuote()" [disabled]="loading() || !selectedOrigin() || !selectedDestination()"
+            class="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium text-lg transition-colors">
+            {{ loading() ? 'Generating Quote...' : 'Get Instant Quote' }}
+          </button>
+        </div>
+
+
+        <!-- CUSTOM SUBMIT BUTTON -->
       </div>
-    </div>
-
-
-
-
-    <!-- Submit Button -->
-  }
-
-    @if (quoteType() === 'Spot') {
-    <button (click)="generateSpotQuote()" [disabled]="loading() || !selectedOrigin() || !selectedDestination()"
-      class="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium text-lg transition-colors">
-      {{ loading() ? 'Generating Quote...' : 'Get Instant Quote' }}
-    </button>
-    } @else {
-    <button (click)="generateCustomQuote()" [disabled]="loading() || !selectedOrigin() || !selectedDestination()"
-      class="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium text-lg transition-colors">
-      {{ loading() ? 'Requesting...' : 'Request Custom Quote' }}
-    </button>
-    }
-  </div>
-</div>
-</div>
-</div>
+      }

@@ -1,11 +1,11 @@
-@if (quote(); as currentQuote) {
+@if (quote()) {
   <div>
     <div class="flex items-center gap-4 mb-6">
       <button (click)="goBack()" class="text-gray-600 hover:text-gray-800">
         ← Back
       </button>
       <h2 class="text-2xl font-bold text-gray-800">Quote Details</h2>
-      @if (currentQuote.status === 'Draft') {
+      @if (quote()!.status === 'Draft') {
 
       }
     </div>
@@ -22,9 +22,9 @@
       }
       <div class="mb-6">
         <div class="text-sm text-gray-600 font-semibold uppercase">Quote #</div>
-        <div class="text-lg font-medium mb-1">{{ currentQuote.quoteNumber || currentQuote.id }}</div>
+            <div class="text-lg font-medium mb-1">{{ quote()!.quoteNumber || quote()!.id }}</div>
         <div class="text-3xl font-bold text-gray-900 mb-2">
-          ${{ (currentQuote.quotedPrice ?? currentQuote.totalPrice) | number:'1.0-0' }}
+          ${{ (quote()!.quotedPrice ?? quote()!.totalPrice) | number:'1.0-0' }}
         </div>
         <div class="text-sm text-gray-600">Total Quote Price</div>
       </div>
@@ -33,33 +33,33 @@
         <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
           <h3 class="font-semibold text-blue-900 mb-3">Price Breakdown</h3>
           <div class="space-y-2 text-sm">
-            @if (currentQuote.baseRate) {
+            @if (quote()!.baseRate) {
               <div class="flex justify-between">
                 <span class="text-gray-700">Rail Base Rate:</span>
-                <span class="font-medium">${{ currentQuote.baseRate | number:'1.2-2' }}</span>
+                <span class="font-medium">${{ quote()!.baseRate | number:'1.2-2' }}</span>
               </div>
             }
-            @if (currentQuote.fuelSurcharge) {
+            @if (quote()!.fuelSurcharge) {
               <div class="flex justify-between">
                 <span class="text-gray-700">Fuel Surcharge:</span>
-                <span class="font-medium">${{ currentQuote.fuelSurcharge | number:'1.2-2' }}</span>
+                <span class="font-medium">${{ quote()!.fuelSurcharge | number:'1.2-2' }}</span>
               </div>
             }
-            @if (currentQuote.pickupCost) {
+            @if (quote()!.pickupCost) {
               <div class="flex justify-between">
                 <span class="text-gray-700">Origin Pickup:</span>
-                <span class="font-medium">${{ currentQuote.pickupCost | number:'1.2-2' }}</span>
+                <span class="font-medium">${{ quote()!.pickupCost | number:'1.2-2' }}</span>
               </div>
             }
-            @if (currentQuote.deliveryCost) {
+            @if (quote()!.deliveryCost) {
               <div class="flex justify-between">
                 <span class="text-gray-700">Final Delivery:</span>
-                <span class="font-medium">${{ currentQuote.deliveryCost | number:'1.2-2' }}</span>
+                <span class="font-medium">${{ quote()!.deliveryCost | number:'1.2-2' }}</span>
               </div>
             }
             <div class="border-t border-blue-200 pt-2 mt-2 flex justify-between font-semibold text-blue-900">
               <span>Total:</span>
-              <span>${{ currentQuote.totalPrice | number:'1.0-0' }}</span>
+              <span>${{ quote()!.totalPrice | number:'1.0-0' }}</span>
             </div>
           </div>
         </div>
@@ -67,16 +67,88 @@
 
       <div class="space-y-4 mb-6">
         <h3 class="font-semibold text-gray-800 flex items-center gap-2">
-          📍 Planned Route ({{ currentQuote.moves?.length ?? 0 }} moves)
+          📍 Planned Route ({{ quote()!.moves?.length ?? 0 }} moves)
         </h3>
-        @if (currentQuote.moves && currentQuote.moves.length > 0) {
-          @for (move of currentQuote.moves; track move.id; let i = $index) {
+        @if (quote()!.moves && quote()!.moves.length > 0) {
+          @for (move of quote()!.moves; track move.id; let i = $index) {
             <div class="border-l-4 border-blue-600 pl-4 py-2">
               <div class="text-sm font-medium text-gray-700">Move {{ i + 1 }}</div>
               <div class="text-sm text-gray-600">
                 <div>From: {{ move.origin?.address || 'Unknown' }} ({{ move.origin?.zip || 'N/A' }})</div>
                 <div>To: {{ move.destination?.address || 'Unknown' }} ({{ move.destination?.zip || 'N/A' }})</div>
               </div>
+
+              <!-- Extra pickup verification (if move is extrapickup) -->
+              @if ((move.moveType || '').toLowerCase() === 'extrapickup') {
+                <div class="mt-3">
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Extra Pickup Address</label>
+                  <div class="flex items-center gap-3">
+                    <input type="text" class="w-full border border-gray-300 rounded px-3 py-2" [value]="extraPickupAddresses()[i]" (input)="onExtraPickupAddressInput(i, $event)" placeholder="Street address" />
+                    <button type="button" (click)="verifyExtraPickupAddress(i)" [disabled]="!((extraPickupAddresses()[i] || '').length >= 3)" class="btn-primary px-3 py-2 text-sm">Verify</button>
+                  </div>
+
+                  @if ((extraPickupVerified()[i]) === true) {
+                    <p class="text-green-600 text-sm mt-2">✔ Address verified</p>
+                  } @else if ((extraPickupVerified()[i]) === false) {
+                    <div class="text-sm mt-2">
+                      <p class="text-yellow-600">⚠ Address not verified (closest match shown)</p>
+                      @if ((extraPickupSuggestions()[i] && extraPickupSuggestions()[i].length > 0)) {
+                        <div class="mt-2 border p-2 bg-white rounded">
+                          @for (s of extraPickupSuggestions()[i]; track s.id || j; let j = $index) {
+                            <div class="py-2 border-b last:border-b-0">
+                              <div class="font-medium text-sm">{{ s.displayName || s.address }}</div>
+                              <div class="text-xs text-gray-600">{{ s.city }}, {{ s.state }} {{ s.zip }}</div>
+                              <div class="mt-1"><a (click)="selectExtraPickupSuggestion(i, s)" class="text-sm text-blue-600">Use this suggestion</a></div>
+                            </div>
+                          }
+                        </div>
+                      } @else if ((extraPickupTopSuggestion()[i])) {
+                        <a (click)="selectExtraPickupSuggestion(i, extraPickupTopSuggestion()[i])" class="text-sm text-blue-600">Use suggestion</a>
+                        <div class="mt-2 border p-2 bg-white rounded">
+                          <div class="font-medium text-sm">{{ extraPickupTopSuggestion()[i]?.displayName || extraPickupTopSuggestion()[i]?.address }}</div>
+                          <div class="text-xs text-gray-600">{{ extraPickupTopSuggestion()[i]?.city }}, {{ extraPickupTopSuggestion()[i]?.state }} {{ extraPickupTopSuggestion()[i]?.zip }}</div>
+                        </div>
+                      }
+                    </div>
+                  }
+                </div>
+              }
+
+              <!-- Extra delivery verification (if move is extradelivery) -->
+              @if ((move.moveType || '').toLowerCase() === 'extradelivery') {
+                <div class="mt-3">
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Extra Delivery Address</label>
+                  <div class="flex items-center gap-3">
+                    <input type="text" class="w-full border border-gray-300 rounded px-3 py-2" [value]="extraDeliveryAddresses()[i]" (input)="onExtraDeliveryAddressInput(i, $event)" placeholder="Street address" />
+                    <button type="button" (click)="verifyExtraDeliveryAddress(i)" [disabled]="!((extraDeliveryAddresses()[i] || '').length >= 3)" class="btn-primary px-3 py-2 text-sm">Verify</button>
+                  </div>
+
+                  @if ((extraDeliveryVerified()[i]) === true) {
+                    <p class="text-green-600 text-sm mt-2">✔ Address verified</p>
+                  } @else if ((extraDeliveryVerified()[i]) === false) {
+                    <div class="text-sm mt-2">
+                      <p class="text-yellow-600">⚠ Address not verified (closest match shown)</p>
+                      @if ((extraDeliverySuggestions()[i] && extraDeliverySuggestions()[i].length > 0)) {
+                        <div class="mt-2 border p-2 bg-white rounded">
+                          @for (s of extraDeliverySuggestions()[i]; track s.id || j; let j = $index) {
+                            <div class="py-2 border-b last:border-b-0">
+                              <div class="font-medium text-sm">{{ s.displayName || s.address }}</div>
+                              <div class="text-xs text-gray-600">{{ s.city }}, {{ s.state }} {{ s.zip }}</div>
+                              <div class="mt-1"><a (click)="selectExtraDeliverySuggestion(i, s)" class="text-sm text-blue-600">Use this suggestion</a></div>
+                            </div>
+                          }
+                        </div>
+                      } @else if ((extraDeliveryTopSuggestion()[i])) {
+                        <a (click)="selectExtraDeliverySuggestion(i, extraDeliveryTopSuggestion()[i])" class="text-sm text-blue-600">Use suggestion</a>
+                        <div class="mt-2 border p-2 bg-white rounded">
+                          <div class="font-medium text-sm">{{ extraDeliveryTopSuggestion()[i]?.displayName || extraDeliveryTopSuggestion()[i]?.address }}</div>
+                          <div class="text-xs text-gray-600">{{ extraDeliveryTopSuggestion()[i]?.city }}, {{ extraDeliveryTopSuggestion()[i]?.state }} {{ extraDeliveryTopSuggestion()[i]?.zip }}</div>
+                        </div>
+                      }
+                    </div>
+                  }
+                </div>
+              }
             </div>
           }
         } @else {
@@ -93,10 +165,10 @@
         </button>
         <button
           *ngIf="isCustomerPersona()"
-          (click)="saveAsDraft()"
+          (click)="holdQuote()"
           [disabled]="loading()"
-          class="flex-1 bg-gray-200 text-gray-800 py-3 rounded-lg hover:bg-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-          💾 Save as Draft
+          class="flex-1 bg-orange-600 text-white py-3 rounded-lg hover:bg-orange-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+          🔒 Hold Price
         </button>
         <button
           (click)="goBack()"

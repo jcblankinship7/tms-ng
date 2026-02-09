@@ -10,8 +10,7 @@ export interface Terminal {
   city: string;
   state: string;
   zip: string;
-  latitude: number;
-  longitude: number;
+  position?: { latitude: number; longitude: number };
   railroad: string;
   status: TerminalStatus;
   mondayHours?: string | null;
@@ -38,8 +37,7 @@ export interface TerminalDto {
   city: string;
   state: string;
   zip: string;
-  latitude: number;
-  longitude: number;
+  position?: { latitude: number; longitude: number };
   railroad: string;
   status: TerminalStatus;
   mondayHours?: string | null;

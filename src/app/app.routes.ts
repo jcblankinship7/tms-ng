@@ -19,6 +19,7 @@ import { RailRateListComponent } from './components/rail-rate-list/rail-rate-lis
 import { RailRateFormComponent } from './components/rail-rate-form/rail-rate-form.component';
 import { QuoteDetailComponent } from './components/quote-detail/quote-detail.component';
 import { AcceptQuoteComponent } from './components/accept-quote/accept-quote.component';
+import { OrderConfirmComponent } from './components/order-confirm/order-confirm.component';
 import { AuthGuardService } from './services/auth.guard';
 import { CustomerListComponent } from './components/customer-list/customer-list.component';
 import { CustomerFormComponent } from './components/customer-form/customer-form.component';
@@ -41,6 +42,7 @@ export const routes: Routes = [
     children: [
       { path: 'orders', component: OrderListComponent },
       { path: 'order/:id', component: OrderDetailComponent, data: { prerender: false } },
+      { path: 'confirm-order', component: OrderConfirmComponent, data: { prerender: false } },
       { path: 'quotes', component: QuoteListComponent },
       { path: 'quotes/:id', component: QuoteDetailComponent, data: { prerender: false } },
       { path: 'accept-quote/:id', component: AcceptQuoteComponent, data: { prerender: false } },

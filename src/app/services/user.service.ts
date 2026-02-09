@@ -58,6 +58,15 @@ export class UserService {
     return this.http.delete<{ message: string }>(`${this.apiUrl}/${id}`);
   }
 
+  adminResetPassword(userId: string, newPassword: string, confirmPassword: string): Observable<{ message: string }>
+  {
+    return this.http.post<{ message: string }>(`/api/auth/admin-reset-password`, {
+      userId,
+      newPassword,
+      confirmPassword
+    });
+  }
+
   private normalizePersona(user: User): User {
     const personaValue = user.persona as unknown;
     if (typeof personaValue === 'string') {

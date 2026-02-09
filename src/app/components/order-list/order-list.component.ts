@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { OrderService } from '../../services/order.service';
 import { MoveService } from '../../services/move.service';
 import { AuthService } from '../../services/auth.service';
+import { CustomerContextService } from '../../services/customer-context.service';
 import { Order, Move } from '../../models/order.model';
 import { Subscription } from 'rxjs';
 
@@ -36,6 +37,7 @@ export class OrderListComponent implements OnInit, OnDestroy {
     private orderService: OrderService,
     private moveService: MoveService,
     private authService: AuthService,
+    private customerContextService: CustomerContextService,
     private router: Router,
     private route: ActivatedRoute
   ) {}
@@ -47,6 +49,11 @@ export class OrderListComponent implements OnInit, OnDestroy {
     this.isMovesView.set(persona === 'ServiceProvider');
     this.setDisplayTitleByPersona(persona || '');
     this.setShowCustomerSelector(persona || '');
+
+    const context = this.customerContextService.getCustomerContext();
+    if (context.customerId) {
+      this.selectedCustomerId.set(String(context.customerId));
+    }
 
     // Subscribe to persona changes (for admin persona switching)
     this.personaSubscription = this.authService.persona$.subscribe(newPersona => {
@@ -82,8 +89,7 @@ export class OrderListComponent implements OnInit, OnDestroy {
 
   private setShowCustomerSelector(persona: string): void {
     // Show customer selector for personas that manage multiple customers
-    // Also show for Customer persona when admin is testing
-    const multiCustomerPersonas = ['Admin', 'MarketingManager', 'SalesRep', 'BillingClerk', 'Customer'];
+    const multiCustomerPersonas = ['Admin', 'MarketingManager', 'SalesRep', 'BillingClerk'];
     this.showCustomerSelector.set(multiCustomerPersonas.includes(persona));
   }
 

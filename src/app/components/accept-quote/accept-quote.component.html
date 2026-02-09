@@ -1,13 +1,13 @@
 <div class="min-h-screen bg-gray-50">
   <!-- Header -->
   <div class="bg-white shadow">
-    <div class="max-w-4xl mx-auto px-6 py-6">
-      <h1 class="text-3xl font-bold" style="color: #002855;">Create Order from Quote</h1>
-      <p class="text-gray-600 mt-2">Enter appointment details to complete your order</p>
+    <div class="px-6 py-6">
+      <h1 class="text-3xl font-bold text-brand">Create Order from Quote</h1>
+      <p class="text-gray-600 mt-2">Enter shipment details to complete your order</p>
     </div>
   </div>
 
-  <div class="max-w-4xl mx-auto p-6">
+  <div class="w-full">
     @if (loading()) {
       <div class="text-center py-12">
         <p class="text-gray-600">Loading quote details...</p>
@@ -17,10 +17,10 @@
         {{ errorMessage() }}
       </div>
     } @else if (quote()) {
-      <!-- Quote Summary -->
-      <div class="bg-white shadow rounded-lg p-6 mb-6">
-        <h2 class="text-xl font-bold mb-4" style="color: #002855;">Quote Summary</h2>
-        <div class="grid grid-cols-4 gap-4 mb-4">
+      <!-- Quote Summary (Full Width No Padding) -->
+      <div class="bg-white shadow-none border-b px-6 py-6">
+        <h2 class="text-xl font-bold mb-4 text-brand">Quote Summary</h2>
+        <div class="grid grid-cols-4 gap-4">
           <div>
             <p class="text-sm text-gray-600 font-semibold uppercase">Quote #</p>
             <p class="font-medium">{{ quote()!.quoteNumber || quote()!.id }}</p>
@@ -38,21 +38,10 @@
             <p class="font-medium">{{ quote()!.expiryDate }}</p>
           </div>
         </div>
-        <hr class="my-4" />
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <p class="text-sm text-gray-600 font-semibold uppercase">Origin Address</p>
-            <p class="font-medium">{{ quote()!.origin }}</p>
-          </div>
-          <div>
-            <p class="text-sm text-gray-600 font-semibold uppercase">Destination Address</p>
-            <p class="font-medium">{{ quote()!.destination }}</p>
-          </div>
-        </div>
 
-        <!-- Admin Price Breakdown (same as Quote Review) -->
+        <!-- Admin Price Breakdown -->
         @if (isAdminOrMarketingManager()) {
-          <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-6 mb-6">
+          <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-6">
             <h3 class="font-semibold text-blue-900 mb-3">Price Breakdown</h3>
             <div class="space-y-2 text-sm">
               @if (quote()!.baseRate) {
@@ -86,198 +75,750 @@
             </div>
           </div>
         }
-
-        <!-- Planned Route (moves) -->
-        <div class="space-y-4 mb-6 mt-4">
-          <h3 class="font-semibold text-gray-800 flex items-center gap-2">📍 Planned Route ({{ (quote()!.moves || []).length }} moves)</h3>
-          @for (move of (quote()!.moves || []); track move.id; let i = $index) {
-            <div class="border-l-4 border-blue-600 pl-4 py-2">
-              <div class="text-sm font-medium text-gray-700">Move {{ i + 1 }}</div>
-              <div class="text-sm text-gray-600">
-                <div>From: {{ move.origin.address }} ({{ move.origin.zip }})</div>
-                <div>To: {{ move.destination.address }} ({{ move.destination.zip }})</div>
-              </div>
-            </div>
-          }
-        </div>
       </div>
 
-      <!-- Order Details Form -->
-      <form [formGroup]="form" (ngSubmit)="onSubmit()" class="bg-white shadow rounded-lg p-6">
-        <h2 class="text-xl font-bold mb-6" style="color: #002855;">Order Details</h2>
+      <!-- Two Column Layout with padding -->
+      <div class="py-6">
+      <!-- Two Column Layout: Order Details (80% Left) + Planned Route (20% Right) -->
+      <div class="grid gap-6 two-column-4-1">
+        <!-- Order Details Form (80% Left) -->
+        <div class="bg-white shadow rounded-lg p-6">
+          <h3 class="text-xl font-bold mb-6 text-brand">Order Details</h3>
 
-        <!-- Appointment Section -->
+          <form [formGroup]="form" (ngSubmit)="onSubmit()">
+
+        <!-- Address Section -->
         <fieldset class="mb-8 pb-8 border-b">
-          <legend class="text-lg font-bold mb-4" style="color: #002855;">Appointment Times</legend>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <!-- Pickup Date -->
+          <legend title="Shpper Details" class="text-lg font-bold mb-4 text-brand">Shipper Details</legend>
+          
+          <div class="space-y-6">
+            <!-- Shipper Address -->
             <div>
-              <label for="pickupDate" class="block text-sm font-semibold text-gray-700 mb-2">
-                Pickup Date <span class="text-red-500">*</span>
-              </label>
-              <input
-                id="pickupDate"
-                type="date"
-                formControlName="pickupAppointmentDate"
-                class="w-full border border-gray-300 rounded px-3 py-2"
-                required
-              />
-              @if (form.get('pickupAppointmentDate')?.hasError('required') && form.get('pickupAppointmentDate')?.touched) {
-                <p class="text-red-500 text-sm mt-1">Pickup date is required</p>
-              }
+              <h3 class="text-sm text-gray-600 font-semibold uppercase mb-3">Shipper Address</h3>
+              <div class="grid grid-cols-2 gap-4">
+                <div class="col-span-2">
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Location Name <span class="text-red-500">*</span></label>
+                  <input
+                    type="text"
+                    formControlName="originName"
+                    class="w-full border border-gray-300 rounded px-3 py-2"
+                    placeholder="Location name"
+                  />
+                </div>
+                <div class="col-span-2 relative">
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Address <span class="text-red-500">*</span></label>
+                  <div class="flex items-center gap-3">
+                    <input
+                      type="text"
+                      formControlName="originAddress"
+                      (input)="onOriginAddressInput($event)"
+                      class="w-full border border-gray-300 rounded px-3 py-2"
+                      placeholder="Street address"
+                    />
+                    <button type="button" (click)="verifyOriginAddress()" [disabled]="!(form.get('originAddress')?.value?.length >= 3)" class="btn-primary px-3 py-2 text-sm">Verify</button>
+                  </div>
+                  @if (showOriginSuggestions() && originSuggestions().length > 0) {
+                    <div class="absolute top-full left-0 right-0 bg-white border border-gray-300 rounded mt-1 shadow-lg z-10">
+                      @for (suggestion of originSuggestions(); track suggestion.id || i; let i = $index) {
+                        <div
+                          (click)="selectOriginAddress(suggestion)"
+                          class="px-3 py-2 hover:bg-blue-50 cursor-pointer border-b border-gray-200 last:border-b-0"
+                        >
+                          <p class="font-medium text-sm">{{ suggestion.displayName || suggestion.address }}</p>
+                          <p class="text-xs text-gray-600">{{ suggestion.city }}, {{ suggestion.state }} {{ suggestion.zip }}</p>
+                        </div>
+                      }
+                    </div>
+                  }
+
+                  <!-- Verification status (shown below suggestions) -->
+                  @if (originVerified() === true) {
+                    <p class="text-green-600 text-sm mt-2">✔ Address verified</p>
+                    @if (originPosition()) {
+                      <p class="text-xs text-gray-600 mt-1">Coordinates: {{ originPosition()?.lat }}, {{ originPosition()?.lng }} — <a target="_blank" rel="noreferrer" [href]="'https://www.google.com/maps?q=' + originPosition()?.lat + ',' + originPosition()?.lng" class="text-blue-600">View on map</a></p>
+                    }
+                  } @else if (originVerified() === false) {
+                    <div class="text-sm mt-2">
+                      <p class="text-yellow-700">⚠ {{ originVerificationMessage() }}</p>
+                      @if (originTopSuggestion()) {
+                        <button type="button" (click)="selectOriginAddress(originTopSuggestion())" class="mt-1 text-sm text-blue-600 underline">Use suggestion</button>
+                        <div class="mt-2 border p-2 bg-white rounded">
+                          <div class="font-medium text-sm">{{ originTopSuggestion()?.displayName || originTopSuggestion()?.address }}</div>
+                          <div class="text-xs text-gray-600">{{ originTopSuggestion()?.city }}, {{ originTopSuggestion()?.state }} {{ originTopSuggestion()?.zip }}</div>
+                        </div>
+                      }
+                    </div>
+                  } @else {
+                    <p class="text-gray-500 text-sm mt-2">Not verified</p>
+                  }
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">City <span class="text-red-500">*</span></label>
+                  <input
+                    type="text"
+                    formControlName="originCity"
+                    class="w-full border border-gray-300 rounded px-3 py-2 bg-gray-100 cursor-not-allowed"
+                    placeholder="City"
+                  />
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">State <span class="text-red-500">*</span></label>
+                    <input
+                      type="text"
+                      formControlName="originState"
+                      class="w-full border border-gray-300 rounded px-3 py-2 bg-gray-100 cursor-not-allowed"
+                      placeholder="State"
+                      maxlength="2"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Zip</label>
+                    <input
+                      title="Origin Zip"
+                      type="text"
+                      formControlName="originZip"
+                      class="w-full border border-gray-300 rounded px-3 py-2 bg-gray-100 cursor-not-allowed"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <!-- Pickup Start Time -->
-            <div>
-              <label for="pickupStartTime" class="block text-sm font-semibold text-gray-700 mb-2">
-                Pickup Start Time <span class="text-red-500">*</span>
-              </label>
-              <input
-                id="pickupStartTime"
-                type="time"
-                formControlName="pickupAppointmentStartTime"
-                class="w-full border border-gray-300 rounded px-3 py-2"
-                required
-              />
-              @if (form.get('pickupAppointmentStartTime')?.hasError('required') && form.get('pickupAppointmentStartTime')?.touched) {
-                <p class="text-red-500 text-sm mt-1">Pickup start time is required</p>
-              }
+            <!-- Shipper Appointment & Contact -->
+            <div class="border-t pt-4">
+              <h3 class="text-sm text-gray-600 font-semibold uppercase mb-3">Pickup Appointment & Contact</h3>
+              <div class="grid grid-cols-2 gap-6">
+                <!-- Left Column: Pickup Times -->
+                <div class="space-y-4">
+                  <!-- Pickup Date -->
+                  <div>
+                    <label for="pickupDate" class="block text-sm font-semibold text-gray-700 mb-2">
+                      Pickup Date <span class="text-red-500">*</span>
+                    </label>
+                    <input
+                      id="pickupDate"
+                      type="date"
+                      formControlName="pickupAppointmentDate"
+                      [attr.min]="minPickupDate"
+                      [attr.max]="maxPickupDate"
+                      class="w-full border border-gray-300 rounded px-3 py-2"
+                      required
+                    />
+                    @if (form.get('pickupAppointmentDate')?.hasError('required') && form.get('pickupAppointmentDate')?.touched) {
+                      <p class="text-red-500 text-sm mt-1">Pickup date is required</p>
+                    }
+                  </div>
+
+                  <!-- Pickup Start Time -->
+                  <div>
+                    <label for="pickupStartTime" class="block text-sm font-semibold text-gray-700 mb-2">
+                      Pickup Start Time <span class="text-red-500">*</span>
+                    </label>
+                    <input
+                      id="pickupStartTime"
+                      type="time"
+                      step="900"
+                      formControlName="pickupAppointmentStartTime"
+                      class="w-full border border-gray-300 rounded px-3 py-2"
+                      required
+                    />
+                    @if (form.get('pickupAppointmentStartTime')?.hasError('required') && form.get('pickupAppointmentStartTime')?.touched) {
+                      <p class="text-red-500 text-sm mt-1">Pickup start time is required</p>
+                    }
+                  </div>
+
+                  <!-- Pickup End Time -->
+                  <div>
+                    <label for="pickupEndTime" class="block text-sm font-semibold text-gray-700 mb-2">
+                      Pickup End Time <span class="text-red-500">*</span>
+                    </label>
+                    <input
+                      id="pickupEndTime"
+                      type="time"
+                      step="900"
+                      formControlName="pickupAppointmentEndTime"
+                      class="w-full border border-gray-300 rounded px-3 py-2"
+                      required
+                    />
+                    @if (form.get('pickupAppointmentEndTime')?.hasError('required') && form.get('pickupAppointmentEndTime')?.touched) {
+                      <p class="text-red-500 text-sm mt-1">Pickup end time is required</p>
+                    }
+                  </div>
+                </div>
+
+                <!-- Right Column: Contact Info -->
+                <div class="space-y-4">
+                  <!-- Pickup Stop Type -->
+                  <div>
+                    <label for="pickupStopType" class="block text-sm font-semibold text-gray-700 mb-2">
+                      Pickup Stop Type
+                    </label>
+                    <select
+                      id="pickupStopType"
+                      formControlName="pickupStopType"
+                      class="w-full border border-gray-300 rounded px-3 py-2"
+                    >
+                      <option value="">Select stop type</option>
+                      <option value="Drop">Drop</option>
+                      <option value="Stay">Stay</option>
+                    </select>
+                  </div>
+
+                  <!-- Pickup Contact Name -->
+                  <div>
+                    <label for="pickupContactName" class="block text-sm font-semibold text-gray-700 mb-2">
+                      Pickup Contact Name
+                    </label>
+                    <input
+                      id="pickupContactName"
+                      type="text"
+                      formControlName="pickupContactName"
+                      class="w-full border border-gray-300 rounded px-3 py-2"
+                      placeholder="Name"
+                    />
+                  </div>
+
+                  <!-- Pickup Contact Phone -->
+                  <div>
+                    <label for="pickupContactPhone" class="block text-sm font-semibold text-gray-700 mb-2">
+                      Pickup Contact Phone
+                    </label>
+                    <input
+                      id="pickupContactPhone"
+                      type="tel"
+                      formControlName="pickupContactPhone"
+                      class="w-full border border-gray-300 rounded px-3 py-2"
+                      placeholder="(XXX) XXX-XXXX"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <!-- Pickup End Time -->
-            <div>
-              <label for="pickupEndTime" class="block text-sm font-semibold text-gray-700 mb-2">
-                Pickup End Time <span class="text-red-500">*</span>
-              </label>
-              <input
-                id="pickupEndTime"
-                type="time"
-                formControlName="pickupAppointmentEndTime"
-                class="w-full border border-gray-300 rounded px-3 py-2"
-                required
-              />
-              @if (form.get('pickupAppointmentEndTime')?.hasError('required') && form.get('pickupAppointmentEndTime')?.touched) {
-                <p class="text-red-500 text-sm mt-1">Pickup end time is required</p>
-              }
-              @if (form.get('pickupAppointmentEndTime')?.hasError('endBeforeStart') && form.get('pickupAppointmentEndTime')?.touched) {
-                <p class="text-red-500 text-sm mt-1">End time cannot be earlier than start time</p>
-              }
-            </div>
-          </div>
+            <!-- Extra Pickup (only if in moves array) -->
+            @if (hasExtraPickup()) {
+              <div class="border-t pt-4">
+                <h3 class="text-sm text-gray-600 font-semibold uppercase mb-3">Extra Pickup</h3>
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                  <div class="col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Location Name</label>
+                    <input
+                      type="text"
+                      formControlName="extraPickupName"
+                      class="w-full border border-gray-300 rounded px-3 py-2"
+                      placeholder="Location name"
+                    />
+                  </div>
+                  <div class="col-span-2 relative">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                    <div class="flex items-center gap-3">
+                      <input
+                        type="text"
+                        formControlName="extraPickupAddress"
+                        (input)="onExtraPickupAddressInput($event)"
+                        class="w-full border border-gray-300 rounded px-3 py-2"
+                        placeholder="Street address"
+                      />
+                      <button type="button" (click)="verifyExtraPickupAddress()" [disabled]="!(form.get('extraPickupAddress')?.value?.length >= 3)" class="btn-primary px-3 py-2 text-sm">Verify</button>
+                    </div>
+                    @if (showExtraPickupSuggestions() && extraPickupSuggestions().length > 0) {
+                      <div class="absolute top-full left-0 right-0 bg-white border border-gray-300 rounded mt-1 shadow-lg z-10">
+                        @for (suggestion of extraPickupSuggestions(); track suggestion.id || i; let i = $index) {
+                          <div
+                            (click)="selectExtraPickupAddress(suggestion)"
+                            class="px-3 py-2 hover:bg-blue-50 cursor-pointer border-b border-gray-200 last:border-b-0"
+                          >
+                            <p class="font-medium text-sm">{{ suggestion.displayName || suggestion.address }}</p>
+                            <p class="text-xs text-gray-600">{{ suggestion.city }}, {{ suggestion.state }} {{ suggestion.zip }}</p>
+                          </div>
+                        }
+                      </div>
+                    }
 
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Delivery Date (Optional) -->
-            <div>
-              <label for="deliveryDate" class="block text-sm font-semibold text-gray-700 mb-2">
-                Delivery Date (Optional)
-              </label>
-              <input
-                id="deliveryDate"
-                type="date"
-                formControlName="deliveryAppointmentDate"
-                class="w-full border border-gray-300 rounded px-3 py-2"
-              />
-            </div>
+                    <!-- Verification status for Extra Pickup -->
+                    @if (extraPickupVerified() === true) {
+                      <p class="text-green-600 text-sm mt-2">✔ Address verified</p>
+                      @if (extraPickupPosition()) {
+                        <p class="text-xs text-gray-600 mt-1">Coordinates: {{ extraPickupPosition()?.lat }}, {{ extraPickupPosition()?.lng }} — <a target="_blank" rel="noreferrer" [href]="'https://www.google.com/maps?q=' + extraPickupPosition()?.lat + ',' + extraPickupPosition()?.lng" class="text-blue-600">View on map</a></p>
+                      }
+                    } @else if (extraPickupVerified() === false) {
+                      <div class="text-sm mt-2">
+                        <p class="text-yellow-600">⚠ Address not verified (closest match shown)</p>
+                        @if (extraPickupTopSuggestion()) {
+                          <a (click)="selectExtraPickupAddress(extraPickupTopSuggestion())" class="text-sm text-blue-600">Use suggestion</a>
+                          <div class="mt-2 border p-2 bg-gray-50 rounded">
+                            <div class="font-medium text-sm">{{ extraPickupTopSuggestion()?.displayName || extraPickupTopSuggestion()?.address }}</div>
+                            <div class="text-xs text-gray-600">{{ extraPickupTopSuggestion()?.city }}, {{ extraPickupTopSuggestion()?.state }} {{ extraPickupTopSuggestion()?.zip }}</div>
+                          </div>
+                        }
+                      </div>
+                    }
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">City</label>
+                    <input
+                      type="text"
+                      formControlName="extraPickupCity"
+                      class="w-full border border-gray-300 rounded px-3 py-2 bg-gray-100 cursor-not-allowed"
+                      placeholder="City"
 
-            <!-- Delivery Start Time (Optional) -->
-            <div>
-              <label for="deliveryStartTime" class="block text-sm font-semibold text-gray-700 mb-2">
-                Delivery Start Time (Optional)
-              </label>
-              <input
-                id="deliveryStartTime"
-                type="time"
-                formControlName="deliveryAppointmentStartTime"
-                class="w-full border border-gray-300 rounded px-3 py-2"
-              />
-            </div>
+                    />
+                  </div>
+                  <div class="grid grid-cols-2 gap-2">
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-1">State</label>
+                      <input
+                        type="text"
+                        formControlName="extraPickupState"
+                        class="w-full border border-gray-300 rounded px-3 py-2 bg-gray-100 cursor-not-allowed"
+                        placeholder="State"
+                        maxlength="2"
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-1">Zip</label>
+                      <input
+                        title="Extra Pickup Zip"
+                        type="text"
+                        formControlName="extraPickupZip"
+                        class="w-full border border-gray-300 rounded px-3 py-2 bg-gray-100 cursor-not-allowed"
+                      />
+                    </div>
+                  </div>
+                </div>
 
-            <!-- Delivery End Time (Optional) -->
-            <div>
-              <label for="deliveryEndTime" class="block text-sm font-semibold text-gray-700 mb-2">
-                Delivery End Time (Optional)
-              </label>
-              <input
-                id="deliveryEndTime"
-                type="time"
-                formControlName="deliveryAppointmentEndTime"
-                class="w-full border border-gray-300 rounded px-3 py-2"
-              />
-              @if (form.get('deliveryAppointmentEndTime')?.hasError('endBeforeStart') && form.get('deliveryAppointmentEndTime')?.touched) {
-                <p class="text-red-500 text-sm mt-1">End time cannot be earlier than start time</p>
-              }
-            </div>
+                <h4 class="text-xs text-gray-600 font-semibold uppercase mb-3">Extra Pickup Appointment & Contact</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div class="space-y-4">
+                    <div>
+                      <label for="extraPickupDate" class="block text-sm font-semibold text-gray-700 mb-2">Pickup Date</label>
+                      <input
+                        id="extraPickupDate"
+                        type="date"
+                        formControlName="extraPickupAppointmentDate"
+                        class="w-full border border-gray-300 rounded px-3 py-2"
+                      />
+                    </div>
+                    <div>
+                      <label for="extraPickupStartTime" class="block text-sm font-semibold text-gray-700 mb-2">Pickup Start Time</label>
+                      <input
+                        id="extraPickupStartTime"
+                        type="time"
+                        step="900"
+                        formControlName="extraPickupAppointmentStartTime"
+                        class="w-full border border-gray-300 rounded px-3 py-2"
+                      />
+                    </div>
+                    <div>
+                      <label for="extraPickupEndTime" class="block text-sm font-semibold text-gray-700 mb-2">Pickup End Time</label>
+                      <input
+                        id="extraPickupEndTime"
+                        type="time"
+                        step="900"
+                        formControlName="extraPickupAppointmentEndTime"
+                        class="w-full border border-gray-300 rounded px-3 py-2"
+                      />
+                    </div>
+                  </div>
+
+                  <div class="space-y-4">
+                    <div>
+                      <label for="extraPickupStopType" class="block text-sm font-semibold text-gray-700 mb-2">Stop Type</label>
+                      <select
+                        id="extraPickupStopType"
+                        formControlName="extraPickupStopType"
+                        class="w-full border border-gray-300 rounded px-3 py-2"
+                      >
+                        <option value="">Select stop type</option>
+                        <option value="Drop">Drop</option>
+                        <option value="Stay">Stay</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label for="extraPickupContactName" class="block text-sm font-semibold text-gray-700 mb-2">Contact Name</label>
+                      <input
+                        id="extraPickupContactName"
+                        type="text"
+                        formControlName="extraPickupContactName"
+                        class="w-full border border-gray-300 rounded px-3 py-2"
+                        placeholder="Name"
+                      />
+                    </div>
+                    <div>
+                      <label for="extraPickupContactPhone" class="block text-sm font-semibold text-gray-700 mb-2">Contact Phone</label>
+                      <input
+                        id="extraPickupContactPhone"
+                        type="tel"
+                        formControlName="extraPickupContactPhone"
+                        class="w-full border border-gray-300 rounded px-3 py-2"
+                        placeholder="(XXX) XXX-XXXX"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            }
           </div>
         </fieldset>
 
-        <!-- Contact Information -->
-        <fieldset class="mb-8">
-          <legend class="text-lg font-bold mb-4" style="color: #002855;">Contact Information</legend>
+        <!-- Separator -->
+        <hr class="my-8 border-t-2 border-gray-400" />
 
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <!-- Pickup Contact Name -->
+        <!-- Consignee Section -->
+        <fieldset class="mb-8 pb-8 border-b">
+          <h2 class="text-lg font-bold mb-4 text-brand">Consignee Details</h2>
+
+          <div class="space-y-6">
+            <!-- Consignee Address -->
             <div>
-              <label for="pickupContactName" class="block text-sm font-semibold text-gray-700 mb-2">
-                Pickup Contact Name
-              </label>
-              <input
-                id="pickupContactName"
-                type="text"
-                formControlName="pickupContactName"
-                class="w-full border border-gray-300 rounded px-3 py-2"
-                placeholder="Name"
-              />
+              <h3 class="text-sm text-gray-600 font-semibold uppercase mb-3">Consignee Address</h3>
+              <div class="grid grid-cols-2 gap-4">
+                <div class="col-span-2">
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Location Name <span class="text-red-500">*</span></label>
+                  <input
+                    type="text"
+                    formControlName="destinationName"
+                    class="w-full border border-gray-300 rounded px-3 py-2"
+                    placeholder="Location name"
+                  />
+                </div>
+                <div class="col-span-2 relative">
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Address <span class="text-red-500">*</span></label>
+                  <div class="flex items-center gap-3">
+                    <input
+                      type="text"
+                      formControlName="destinationAddress"
+                      (input)="onDestinationAddressInput($event)"
+                      class="w-full border border-gray-300 rounded px-3 py-2"
+                      placeholder="Street address"
+                    />
+                    <button type="button" (click)="verifyDestinationAddress()" [disabled]="!(form.get('destinationAddress')?.value?.length >= 3)" class="btn-primary px-3 py-2 text-sm">Verify</button>
+                  </div>
+                  @if (showDestinationSuggestions() && destinationSuggestions().length > 0) {
+                    <div class="absolute top-full left-0 right-0 bg-white border border-gray-300 rounded mt-1 shadow-lg z-10">
+                      @for (suggestion of destinationSuggestions(); track suggestion.id || i; let i = $index) {
+                        <div
+                          (click)="selectDestinationAddress(suggestion)"
+                          class="px-3 py-2 hover:bg-blue-50 cursor-pointer border-b border-gray-200 last:border-b-0"
+                        >
+                          <p class="font-medium text-sm">{{ suggestion.displayName || suggestion.address }}</p>
+                          <p class="text-xs text-gray-600">{{ suggestion.city }}, {{ suggestion.state }} {{ suggestion.zip }}</p>
+                        </div>
+                      }
+                    </div>
+                  }
+
+                  <!-- Verification status -->
+                  @if (destinationVerified() === true) {
+                    <p class="text-green-600 text-sm mt-2">✔ Address verified</p>
+                    @if (destinationPosition()) {
+                      <p class="text-xs text-gray-600 mt-1">Coordinates: {{ destinationPosition()?.lat }}, {{ destinationPosition()?.lng }} — <a target="_blank" rel="noreferrer" [href]="'https://www.google.com/maps?q=' + destinationPosition()?.lat + ',' + destinationPosition()?.lng" class="text-blue-600">View on map</a></p>
+                    }
+                  } @else if (destinationVerified() === false) {
+                    <div class="text-sm mt-2">
+                      <p class="text-yellow-700">⚠ {{ destinationVerificationMessage() }}</p>
+                      @if (destinationTopSuggestion()) {
+                        <button type="button" (click)="selectDestinationAddress(destinationTopSuggestion())" class="mt-1 text-sm text-blue-600 underline">Use suggestion</button>
+                      }
+                    </div>
+                  } @else {
+                    <p class="text-gray-500 text-sm mt-2">Not verified</p>
+                  }
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">City <span class="text-red-500">*</span></label>
+                  <input
+                    type="text"
+                    formControlName="destinationCity"
+                    class="w-full border border-gray-300 rounded px-3 py-2 bg-gray-100 cursor-not-allowed"
+                    placeholder="City"
+                  />
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">State <span class="text-red-500">*</span></label>
+                    <input
+                      type="text"
+                      formControlName="destinationState"
+                      class="w-full border border-gray-300 rounded px-3 py-2 bg-gray-100 cursor-not-allowed"
+                      placeholder="State"
+                      maxlength="2"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Zip</label>
+                    <input
+                      type="text"
+                      title="Destination Zip"
+                      formControlName="destinationZip"
+                      class="w-full border border-gray-300 rounded px-3 py-2 bg-gray-100 cursor-not-allowed"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <!-- Pickup Contact Phone -->
-            <div>
-              <label for="pickupContactPhone" class="block text-sm font-semibold text-gray-700 mb-2">
-                Pickup Contact Phone
-              </label>
-              <input
-                id="pickupContactPhone"
-                type="tel"
-                formControlName="pickupContactPhone"
-                class="w-full border border-gray-300 rounded px-3 py-2"
-                placeholder="(XXX) XXX-XXXX"
-              />
-            </div>
-          </div>
+            <!-- Consignee Appointment & Contact -->
+            <div class="border-t pt-4">
+              <h3 class="text-sm text-gray-600 font-semibold uppercase mb-3">Delivery Appointment & Contact</h3>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+                <div class="space-y-4">
+                  <!-- Delivery Date (Optional) -->
+                  <div>
+                    <label for="deliveryDate" class="block text-sm font-semibold text-gray-700 mb-2">
+                      Delivery Date (Optional)
+                    </label>
+                    <input
+                      id="deliveryDate"
+                      type="date"
+                      formControlName="deliveryAppointmentDate"
+                      class="w-full border border-gray-300 rounded px-3 py-2"
+                    />
+                  </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Delivery Contact Name -->
-            <div>
-              <label for="deliveryContactName" class="block text-sm font-semibold text-gray-700 mb-2">
-                Delivery Contact Name
-              </label>
-              <input
-                id="deliveryContactName"
-                type="text"
-                formControlName="deliveryContactName"
-                class="w-full border border-gray-300 rounded px-3 py-2"
-                placeholder="Name"
-              />
+                  <!-- Delivery Start Time (Optional) -->
+                  <div>
+                    <label for="deliveryStartTime" class="block text-sm font-semibold text-gray-700 mb-2">
+                      Delivery Start Time (Optional)
+                    </label>
+                    <input
+                      id="deliveryStartTime"
+                      type="time"
+                      step="900"
+                      formControlName="deliveryAppointmentStartTime"
+                      class="w-full border border-gray-300 rounded px-3 py-2"
+                    />
+                  </div>
+
+                  <!-- Delivery End Time (Optional) -->
+                  <div>
+                    <label for="deliveryEndTime" class="block text-sm font-semibold text-gray-700 mb-2">
+                      Delivery End Time (Optional)
+                    </label>
+                    <input
+                      id="deliveryEndTime"
+                      type="time"
+                      step="900"
+                      formControlName="deliveryAppointmentEndTime"
+                      class="w-full border border-gray-300 rounded px-3 py-2"
+                    />
+                  </div>
+                </div>
+
+                <div class="space-y-4">
+                  <!-- Delivery Stop Type -->
+                  <div>
+                    <label for="deliveryStopType" class="block text-sm font-semibold text-gray-700 mb-2">
+                      Delivery Stop Type
+                    </label>
+                    <select
+                      id="deliveryStopType"
+                      formControlName="deliveryStopType"
+                      class="w-full border border-gray-300 rounded px-3 py-2"
+                    >
+                      <option value="">Select stop type</option>
+                      <option value="Drop">Drop</option>
+                      <option value="Stay">Stay</option>
+                    </select>
+                  </div>
+
+                  <!-- Delivery Contact Name -->
+                  <div>
+                    <label for="deliveryContactName" class="block text-sm font-semibold text-gray-700 mb-2">
+                      Delivery Contact Name
+                    </label>
+                    <input
+                      id="deliveryContactName"
+                      type="text"
+                      formControlName="deliveryContactName"
+                      class="w-full border border-gray-300 rounded px-3 py-2"
+                      placeholder="Name"
+                    />
+                  </div>
+
+                  <!-- Delivery Contact Phone -->
+                  <div>
+                    <label for="deliveryContactPhone" class="block text-sm font-semibold text-gray-700 mb-2">
+                      Delivery Contact Phone
+                    </label>
+                    <input
+                      id="deliveryContactPhone"
+                      type="tel"
+                      formControlName="deliveryContactPhone"
+                      class="w-full border border-gray-300 rounded px-3 py-2"
+                      placeholder="(XXX) XXX-XXXX"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <!-- Delivery Contact Phone -->
-            <div>
-              <label for="deliveryContactPhone" class="block text-sm font-semibold text-gray-700 mb-2">
-                Delivery Contact Phone
-              </label>
-              <input
-                id="deliveryContactPhone"
-                type="tel"
-                formControlName="deliveryContactPhone"
-                class="w-full border border-gray-300 rounded px-3 py-2"
-                placeholder="(XXX) XXX-XXXX"
-              />
-            </div>
+            <!-- Extra Delivery (only if in moves array) -->
+            @if (hasExtraDelivery()) {
+              <div class="border-t pt-4">
+                <h3 class="text-sm text-gray-600 font-semibold uppercase mb-3">Extra Delivery</h3>
+                <div class="grid grid-cols-2 gap-4">
+                  <div class="col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Location Name</label>
+                    <input
+                      type="text"
+                      formControlName="extraDeliveryName"
+                      class="w-full border border-gray-300 rounded px-3 py-2"
+                      placeholder="Location name"
+                    />
+                  </div>
+                  <div class="col-span-2 relative">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                    <div class="flex items-center gap-3">
+                      <input
+                        type="text"
+                        formControlName="extraDeliveryAddress"
+                        (input)="onExtraDeliveryAddressInput($event)"
+                        class="w-full border border-gray-300 rounded px-3 py-2"
+                        placeholder="Street address"
+                      />
+                      <button type="button" (click)="verifyExtraDeliveryAddress()" [disabled]="!(form.get('extraDeliveryAddress')?.value?.length >= 3)" class="btn-primary px-3 py-2 text-sm">Verify</button>
+                    </div>
+                    @if (showExtraDeliverySuggestions() && extraDeliverySuggestions().length > 0) {
+                      <div class="absolute top-full left-0 right-0 bg-white border border-gray-300 rounded mt-1 shadow-lg z-10">
+                        @for (suggestion of extraDeliverySuggestions(); track suggestion.id || i; let i = $index) {
+                          <div
+                            (click)="selectExtraDeliveryAddress(suggestion)"
+                            class="px-3 py-2 hover:bg-blue-50 cursor-pointer border-b border-gray-200 last:border-b-0"
+                          >
+                            <p class="font-medium text-sm">{{ suggestion.displayName || suggestion.address }}</p>
+                            <p class="text-xs text-gray-600">{{ suggestion.city }}, {{ suggestion.state }} {{ suggestion.zip }}</p>
+                          </div>
+                        }
+                      </div>
+                    }
+
+                    <!-- Verification status for Extra Delivery -->
+                    @if (extraDeliveryVerified() === true) {
+                      <p class="text-green-600 text-sm mt-2">✔ Address verified</p>
+                    } @else if (extraDeliveryVerified() === false) {
+                      <div class="text-sm mt-2">
+                        <p class="text-yellow-600">⚠ Address not verified (closest match shown)</p>
+                        @if (extraDeliveryTopSuggestion()) {
+                          <a (click)="selectExtraDeliveryAddress(extraDeliveryTopSuggestion())" class="text-sm text-blue-600">Use suggestion</a>
+                          <div class="mt-2 border p-2 bg-gray-50 rounded">
+                            <div class="font-medium text-sm">{{ extraDeliveryTopSuggestion()?.displayName || extraDeliveryTopSuggestion()?.address }}</div>
+                            <div class="text-xs text-gray-600">{{ extraDeliveryTopSuggestion()?.city }}, {{ extraDeliveryTopSuggestion()?.state }} {{ extraDeliveryTopSuggestion()?.zip }}</div>
+                          </div>
+                        }
+                      </div>
+                    }
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">City</label>
+                    <input
+                      type="text"
+                      formControlName="extraDeliveryCity"
+                      class="w-full border border-gray-300 rounded px-3 py-2 bg-gray-100 cursor-not-allowed"
+                      placeholder="City"
+                    />
+                  </div>
+                  <div class="grid grid-cols-2 gap-2">
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-1">State</label>
+                      <input
+                        type="text"
+                        formControlName="extraDeliveryState"
+                        class="w-full border border-gray-300 rounded px-3 py-2 bg-gray-100 cursor-not-allowed"
+                        placeholder="State"
+                        maxlength="2"
+
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-1">Zip</label>
+                      <input
+                        type="text"
+                        title="Extra Delivery Zip"
+                        formControlName="extraDeliveryZip"
+                        class="w-full border border-gray-300 rounded px-3 py-2 bg-gray-100 cursor-not-allowed"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <h4 class="text-xs text-gray-600 font-semibold uppercase mb-3 mt-4">Extra Delivery Appointment & Contact</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                  <div class="space-y-4">
+                    <div>
+                      <label for="extraDeliveryDate" class="block text-sm font-semibold text-gray-700 mb-2">Delivery Date</label>
+                      <input
+                        id="extraDeliveryDate"
+                        type="date"
+                        formControlName="extraDeliveryAppointmentDate"
+                        class="w-full border border-gray-300 rounded px-3 py-2"
+                      />
+                    </div>
+                    <div>
+                      <label for="extraDeliveryStartTime" class="block text-sm font-semibold text-gray-700 mb-2">Delivery Start Time</label>
+                      <input
+                        id="extraDeliveryStartTime"
+                        type="time"
+                        step="900"
+                        formControlName="extraDeliveryAppointmentStartTime"
+                        class="w-full border border-gray-300 rounded px-3 py-2"
+                      />
+                    </div>
+                    <div>
+                      <label for="extraDeliveryEndTime" class="block text-sm font-semibold text-gray-700 mb-2">Delivery End Time</label>
+                      <input
+                        id="extraDeliveryEndTime"
+                        type="time"
+                        step="900"
+                        formControlName="extraDeliveryAppointmentEndTime"
+                        class="w-full border border-gray-300 rounded px-3 py-2"
+                      />
+                    </div>
+                  </div>
+
+                  <div class="space-y-4">
+                    <div>
+                      <label for="extraDeliveryStopType" class="block text-sm font-semibold text-gray-700 mb-2">Stop Type</label>
+                      <select
+                        id="extraDeliveryStopType"
+                        formControlName="extraDeliveryStopType"
+                        class="w-full border border-gray-300 rounded px-3 py-2"
+                      >
+                        <option value="">Select stop type</option>
+                        <option value="Drop">Drop</option>
+                        <option value="Stay">Stay</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label for="extraDeliveryContactName" class="block text-sm font-semibold text-gray-700 mb-2">Contact Name</label>
+                      <input
+                        id="extraDeliveryContactName"
+                        type="text"
+                        formControlName="extraDeliveryContactName"
+                        class="w-full border border-gray-300 rounded px-3 py-2"
+                        placeholder="Name"
+                      />
+                    </div>
+                    <div>
+                      <label for="extraDeliveryContactPhone" class="block text-sm font-semibold text-gray-700 mb-2">Contact Phone</label>
+                      <input
+                        id="extraDeliveryContactPhone"
+                        type="tel"
+                        formControlName="extraDeliveryContactPhone"
+                        class="w-full border border-gray-300 rounded px-3 py-2"
+                        placeholder="(XXX) XXX-XXXX"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            }
           </div>
         </fieldset>
 
         <!-- Action Buttons -->
-        <div class="flex gap-3 justify-end">
+        <div class="flex gap-3 justify-end mt-8 pt-6 border-t">
           <button
             type="button"
             (click)="cancel()"
@@ -287,16 +828,69 @@
           </button>
           <button
             type="submit"
-            class="px-6 py-2 text-white rounded-lg font-medium"
-            style="background-color: #003DA5;"
+            class="px-6 py-2 text-white rounded-lg font-medium bg-brand-strong"
             [disabled]="submitting() || form.invalid"
             [style.opacity]="submitting() || form.invalid ? '0.6' : '1'"
-            onmouseover="this.style.backgroundColor='#002855'"
-            onmouseout="this.style.backgroundColor='#003DA5'">
+>
             {{ submitting() ? 'Creating Order...' : 'Create Order' }}
           </button>
         </div>
-      </form>
+          </form>
+        </div>
+
+        <!-- Planned Route (20% Right) -->
+        <div class="space-y-6">
+          <div class="bg-white shadow rounded-lg p-6">
+            <h3 class="text-xl font-bold mb-6 text-brand">📍 Planned Route</h3>
+            <div class="space-y-4">
+              @if ((quote()!.moves || []).length > 0) {
+                @for (move of (quote()!.moves || []); track move.id || i; let i = $index) {
+                  <div class="border-l-4 border-blue-600 pl-4 py-2">
+                    <div class="text-sm font-medium text-gray-700">Move {{ i + 1 }}</div>
+                    <div class="text-sm text-gray-600">
+                      <div>From: {{ move.origin?.address }} ({{ move.origin?.zip }})</div>
+                      <div>To: {{ move.destination?.address }} ({{ move.destination?.zip }})</div>
+                    </div>
+                  </div>
+                }
+              } @else {
+                <p class="text-sm text-gray-600">No planned moves available</p>
+              }
+            </div>
+          </div>
+
+          <div class="bg-white shadow rounded-lg p-6">
+            <h3 class="text-xl font-bold mb-6 text-brand">Shipment Details</h3>
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2" for="customerShipmentNumber">
+                  Customer Shipment #
+                </label>
+                <input
+                  id="customerShipmentNumber"
+                  type="text"
+                  formControlName="customerShipmentNumber"
+                  class="w-full border border-gray-300 rounded px-3 py-2"
+                  placeholder="Enter shipment number"
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2" for="containerNumber">
+                  Container
+                </label>
+                <input
+                  id="containerNumber"
+                  type="text"
+                  formControlName="containerNumber"
+                  class="w-full border border-gray-300 rounded px-3 py-2"
+                  placeholder="UMAX 649754"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      </div>
     }
   </div>
 </div>

@@ -202,6 +202,12 @@ import { CustomerService } from '../../services/customer.service';
                         class="text-green-600 hover:text-green-800 font-medium">
                         Accept
                       </button>
+                    } @else if (quote.status === 'On Hold') {
+                      <button
+                        (click)="acceptQuote(quote.id)"
+                        class="text-orange-600 hover:text-orange-800 font-medium">
+                        Create Order
+                      </button>
                     } @else if (quote.status === 'Accepted') {
                       @if (quote.orderId) {
                         <a
@@ -482,6 +488,7 @@ export class QuoteListComponent implements OnInit {
       'Draft': 'bg-gray-100 text-gray-800',
       'Submitted': 'bg-blue-100 text-blue-800',
       'Quoted': 'bg-blue-100 text-blue-800',
+      'On Hold': 'bg-orange-100 text-orange-800',
       'Accepted': 'bg-green-100 text-green-800',
       'Rejected': 'bg-red-100 text-red-800',
       'Expired': 'bg-orange-100 text-orange-800'

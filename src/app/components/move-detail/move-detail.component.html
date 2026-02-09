@@ -1,4 +1,4 @@
-<div class="min-h-screen" style="background-color: #F8F8F8;">
+<div class="min-h-screen gradient-muted">
   @if (loading()) {
     <div class="flex items-center justify-center py-20">
       <div class="text-xl text-gray-600">Loading move details...</div>
@@ -18,7 +18,7 @@
         <button
           (click)="goBack()"
           class="px-6 py-2 rounded font-semibold text-white transition-colors"
-          style="background-color: #003DA5;">
+          class="bg-brand-strong">
           Back to Moves
         </button>
       </div>
@@ -26,7 +26,7 @@
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <!-- Move Type and Status -->
         <div class="bg-white rounded-lg shadow-lg p-8">
-          <h2 class="text-2xl font-bold text-gray-900 mb-6" style="color: #002855;">Move Information</h2>
+          <h2 class="text-2xl font-bold text-gray-900 mb-6 text-brand">Move Information</h2>
           
           <div class="space-y-4">
             <div class="border-b pb-4">
@@ -43,7 +43,7 @@
 
         <!-- Origin Stop -->
         <div class="bg-white rounded-lg shadow-lg p-8">
-          <h2 class="text-2xl font-bold text-gray-900 mb-6" style="color: #002855;">Origin Stop</h2>
+          <h2 class="text-2xl font-bold text-gray-900 mb-6 text-brand">Origin Stop</h2>
           
           <div class="space-y-4">
             <div class="border-b pb-4">
@@ -74,7 +74,7 @@
 
         <!-- Destination Stop -->
         <div class="bg-white rounded-lg shadow-lg p-8">
-          <h2 class="text-2xl font-bold text-gray-900 mb-6" style="color: #002855;">Destination Stop</h2>
+          <h2 class="text-2xl font-bold text-gray-900 mb-6 text-brand">Destination Stop</h2>
           
           <div class="space-y-4">
             <div class="border-b pb-4">
@@ -106,13 +106,13 @@
         <!-- Shipment Details -->
         @if (currentMove.shipmentDetails) {
           <div class="bg-white rounded-lg shadow-lg p-8">
-            <h2 class="text-2xl font-bold text-gray-900 mb-6" style="color: #002855;">Shipment Details</h2>
+            <h2 class="text-2xl font-bold text-gray-900 mb-6 text-brand">Shipment Details</h2>
             
             <div class="space-y-4">
               @if (currentMove.shipmentDetails.containerSealNumber) {
                 <div class="border-b pb-4">
                   <p class="text-sm text-gray-600 font-semibold uppercase">Container Seal Number</p>
-                  <p class="text-lg font-semibold text-gray-900 mt-1" style="color: #FFB81C;">{{ currentMove.shipmentDetails.containerSealNumber }}</p>
+                  <p class="text-lg font-semibold text-gray-900 mt-1 text-warning-gold">{{ currentMove.shipmentDetails.containerSealNumber }}</p>
                 </div>
               }
               
@@ -142,9 +142,9 @@
                   <p class="text-sm text-gray-600 font-semibold uppercase">Hazardous Material</p>
                   <div class="mt-1">
                     @if (currentMove.shipmentDetails.hazardous) {
-                      <span class="inline-block px-4 py-2 rounded font-bold text-white" style="background-color: #DC2626;">Yes - Hazardous</span>
+                      <span class="inline-block px-4 py-2 rounded font-bold text-white bg-danger">Yes - Hazardous</span>
                     } @else {
-                      <span class="inline-block px-4 py-2 rounded font-bold text-white" style="background-color: #16A34A;">No - Standard</span>
+                      <span class="inline-block px-4 py-2 rounded font-bold text-white bg-success">No - Standard</span>
                     }
                   </div>
                 </div>

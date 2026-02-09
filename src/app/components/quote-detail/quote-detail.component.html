@@ -1,13 +1,59 @@
 <div class="min-h-screen bg-gray-50">
   <!-- Header -->
-  <div class="bg-white shadow">
-    <div class="max-w-4xl mx-auto px-6 py-6 flex justify-between items-center">
-      <h1 class="text-3xl font-bold" style="color: #002855;">Quote Details</h1>
-      <button
-        (click)="goBack()"
-        class="px-4 py-2 text-gray-600 hover:text-gray-900 font-medium">
-        ← Back
-      </button>
+  <div class="bg-gray-50">
+    <div class="max-w-4xl mx-auto px-6 py-6">
+      <div class="bg-white shadow rounded-lg px-6 py-6">
+        <div class="flex justify-between items-center">
+          <h1 class="text-3xl font-bold text-brand">Quote Details</h1>
+          <button
+            (click)="goBack()"
+            class="px-4 py-2 text-gray-600 hover:text-gray-900 font-medium">
+            ← Back
+          </button>
+        </div>
+
+        @if (quote()) {
+          <div class="mt-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm text-gray-600 uppercase font-semibold">Quote Number</p>
+                <p class="text-lg font-medium">{{ quote()!.quoteNumber }}</p>
+              </div>
+
+              <div class="text-right">
+                <p class="text-sm text-gray-600 uppercase font-semibold">Created</p>
+                <p class="text-sm text-gray-600">{{ quote()!.createdDate | date:'MM/dd/yyyy h:mm a' }}</p>
+              </div>
+            </div>
+
+            <!-- Subtle divider above Type/Status/Price -->
+            <div class="mt-4 border-t border-gray-200"></div>
+
+            <!-- Type / Status / Price under Quote Number -->
+            <div class="mt-3 flex flex-wrap items-center gap-6">
+              <div>
+                <p class="text-sm text-gray-600 uppercase font-semibold">Type</p>
+                <span class="px-3 py-1 text-sm rounded-full font-medium inline-block bg-green-100 text-green-800">
+                  {{ getTypeEmoji() }} {{ quote()!.quoteType }}
+                </span>
+              </div>
+
+              <div>
+                <p class="text-sm text-gray-600 uppercase font-semibold">Status</p>
+                <span [class]="getStatusColor(quote()!.status)" class="px-3 py-1 text-sm rounded-full font-medium inline-block">
+                  {{ getStatusEmoji(quote()!.status) }} {{ quote()!.status }}
+                </span>
+              </div>
+
+              <div class="ml-auto text-right">
+                <p class="text-sm text-gray-600 uppercase font-semibold">Price</p>
+                <p class="text-lg font-bold text-blue-600">${{ (quote()!.quotedPrice ?? quote()!.totalPrice) | number:'1.2-2' }}</p>
+              </div>
+            </div>
+
+          </div>
+        }
+      </div>
     </div>
   </div>
 
@@ -22,60 +68,101 @@
       </div>
     } @else if (quote()) {
       <div class="bg-white shadow rounded-lg p-8 mb-6">
-        <!-- Quote Header Info -->
-        <div class="grid grid-cols-3 gap-6 mb-8 pb-8 border-b">
-          <div>
-            <p class="text-sm text-gray-600 uppercase font-semibold">Quote Number</p>
-            <p class="text-xl font-bold">{{ quote()!.quoteNumber }}</p>
-          </div>
-          <div>
-            <p class="text-sm text-gray-600 uppercase font-semibold">Type</p>
-            <span
-              [class]="quote()!.quoteType === 'Spot'
-                ? 'bg-green-100 text-green-800'
-                : 'bg-purple-100 text-purple-800'"
-              class="px-3 py-1 text-sm rounded-full font-medium inline-block">
-              {{ quote()!.quoteType }}
-            </span>
-          </div>
-          <div>
-            <p class="text-sm text-gray-600 uppercase font-semibold">Status</p>
-            <span
-              [class]="getStatusColor(quote()!.status)"
-              class="px-3 py-1 text-sm rounded-full font-medium inline-block">
-              {{ quote()!.status }}
-            </span>
-          </div>
-        </div>
+
 
         <!-- Route Information -->
         <div class="mb-8 pb-8 border-b">
-          <h2 class="text-lg font-bold mb-4" style="color: #002855;">Route</h2>
-          <div class="grid grid-cols-2 gap-8">
-            <div>
-              <p class="text-sm text-gray-600 uppercase font-semibold mb-2">Pickup</p>
-              <p class="text-lg font-medium">{{ quote()!.origin }}</p>
-              @if (quote()!.pickupAppointmentDate) {
-                <p class="text-sm text-gray-600 mt-2">
-                  {{ quote()!.pickupAppointmentDate }} @ {{ quote()!.pickupAppointmentTime }}
-                </p>
+          <h2 class="text-lg font-bold mb-4 text-brand">Route</h2>
+          
+          @if (quote()!.moves && quote()!.moves?.length! > 0) {
+            <!-- Moves from Quote -->
+            <div class="space-y-4">
+              @for (move of quote()!.moves!; track (move.id || i); let i = $index) {
+                <div class="border-l-4 border-blue-600 pl-4 py-3 bg-blue-50 rounded-r">
+                  <div class="flex justify-between items-start mb-2">
+                    <div>
+                      <div class="text-sm font-semibold text-gray-700 mb-1">{{ getMoveTypeLabel(move.moveType) }}</div>
+                    </div>
+                  </div>
+                  
+                  <div class="grid grid-cols-2 gap-4 mt-3">
+                    <!-- Origin Stop -->
+                    <div>
+                      <p class="text-xs text-gray-600 uppercase font-semibold mb-1">From</p>
+                      @if (move.originStop?.name) {
+                        <p class="font-medium text-gray-900">{{ move.originStop?.name }}</p>
+                      }
+                      @if (move.originStop?.address) {
+                        <p class="text-sm text-gray-600">{{ move.originStop?.address }}</p>
+                      }
+                      @if (move.originStop?.city) {
+                        <p class="text-sm text-gray-600">
+                          {{ move.originStop?.city }}, {{ move.originStop?.state }} {{ move.originStop?.zipCode }}
+                        </p>
+                      }
+                      @if (!move.originStop?.name && !move.originStop?.address && !move.originStop?.city) {
+                        <p class="text-sm text-gray-500 italic">Location not specified</p>
+                      }
+                    </div>
+                    
+                    <!-- Destination Stop -->
+                    <div>
+                      <p class="text-xs text-gray-600 uppercase font-semibold mb-1">To</p>
+                      @if (move.destinationStop?.name) {
+                        <p class="font-medium text-gray-900">{{ move.destinationStop?.name }}</p>
+                      }
+                      @if (move.destinationStop?.address) {
+                        <p class="text-sm text-gray-600">{{ move.destinationStop?.address }}</p>
+                      }
+                      @if (move.destinationStop?.city) {
+                        <p class="text-sm text-gray-600">
+                          {{ move.destinationStop?.city }}, {{ move.destinationStop?.state }} {{ move.destinationStop?.zipCode }}
+                        </p>
+                      }
+                      @if (!move.destinationStop?.name && !move.destinationStop?.address && !move.destinationStop?.city) {
+                        <p class="text-sm text-gray-500 italic">Location not specified</p>
+                      }
+                    </div>
+                  </div>
+                </div>
               }
             </div>
-            <div>
-              <p class="text-sm text-gray-600 uppercase font-semibold mb-2">Delivery</p>
-              <p class="text-lg font-medium">{{ quote()!.destination }}</p>
-              @if (quote()!.deliveryAppointmentDate) {
-                <p class="text-sm text-gray-600 mt-2">
-                  {{ quote()!.deliveryAppointmentDate }} @ {{ quote()!.deliveryAppointmentTime }}
-                </p>
-              }
+          } @else {
+            <!-- Fallback to Simple Pickup/Delivery -->
+            <div class="grid grid-cols-2 gap-8">
+              <div>
+                <p class="text-sm text-gray-600 uppercase font-semibold mb-2">Pickup</p>
+                @if (quote()!.originCity) {
+                  <p class="text-lg font-medium">{{ quote()!.originCity }}, {{ quote()!.originState }} {{ quote()!.originZip }}</p>
+                } @else {
+                  <p class="text-lg font-medium">{{ quote()!.origin }}</p>
+                }
+                @if (quote()!.pickupAppointmentDate) {
+                  <p class="text-sm text-gray-600 mt-2">
+                    {{ quote()!.pickupAppointmentDate }} @ {{ quote()!.pickupAppointmentTime }}
+                  </p>
+                }
+              </div>
+              <div>
+                <p class="text-sm text-gray-600 uppercase font-semibold mb-2">Delivery</p>
+                @if (quote()!.destinationCity) {
+                  <p class="text-lg font-medium">{{ quote()!.destinationCity }}, {{ quote()!.destinationState }} {{ quote()!.destinationZip }}</p>
+                } @else {
+                  <p class="text-lg font-medium">{{ quote()!.destination }}</p>
+                }
+                @if (quote()!.deliveryAppointmentDate) {
+                  <p class="text-sm text-gray-600 mt-2">
+                    {{ quote()!.deliveryAppointmentDate }} @ {{ quote()!.deliveryAppointmentTime }}
+                  </p>
+                }
+              </div>
             </div>
-          </div>
+          }
         </div>
 
         <!-- Shipment Details -->
         <div class="mb-8 pb-8 border-b">
-          <h2 class="text-lg font-bold mb-4" style="color: #002855;">Shipment Details</h2>
+          <h2 class="text-lg font-bold mb-4 text-brand">Shipment Details</h2>
           <div class="grid grid-cols-2 gap-6">
             @if (quote()!.weight) {
               <div>
@@ -104,46 +191,14 @@
           </div>
         </div>
 
-        <!-- Pricing -->
-        <div class="mb-8 pb-8 border-b">
-          <h2 class="text-lg font-bold mb-4" style="color: #002855;">Pricing</h2>
-          <div class="grid grid-cols-2 gap-6">
-            @if (quote()!.quotedPrice) {
-              <div>
-                <p class="text-sm text-gray-600 uppercase font-semibold">Quoted Price</p>
-                <p class="text-2xl font-bold text-blue-600">${{ quote()!.quotedPrice?.toFixed(2) }}</p>
-              </div>
-            }
-            @if (quote()!.acceptedPrice) {
-              <div>
-                <p class="text-sm text-gray-600 uppercase font-semibold">Accepted Price</p>
-                <p class="text-2xl font-bold text-green-600">${{ quote()!.acceptedPrice?.toFixed(2) }}</p>
-              </div>
-            }
-          </div>
-        </div>
 
-        <!-- Dates -->
-        <div class="mb-8 pb-8 border-b">
-          <h2 class="text-lg font-bold mb-4" style="color: #002855;">Timeline</h2>
-          <div class="grid grid-cols-2 gap-6">
-            <div>
-              <p class="text-sm text-gray-600 uppercase font-semibold">Created</p>
-              <p class="text-lg font-medium">{{ quote()!.createdDate }}</p>
-            </div>
-            @if (quote()!.expiryDate) {
-              <div>
-                <p class="text-sm text-gray-600 uppercase font-semibold">Expires</p>
-                <p class="text-lg font-medium">{{ quote()!.expiryDate }}</p>
-              </div>
-            }
-          </div>
-        </div>
+
+
 
         <!-- Notes -->
         @if (quote()!.notes) {
           <div class="mb-8 pb-8 border-b">
-            <h2 class="text-lg font-bold mb-4" style="color: #002855;">Notes</h2>
+            <h2 class="text-lg font-bold mb-4 text-brand">Notes</h2>
             <p class="text-gray-700">{{ quote()!.notes }}</p>
           </div>
         }
@@ -151,7 +206,7 @@
         <!-- Contact Information -->
         @if (quote()!.orderDetails) {
           <div class="mb-8 pb-8 border-b">
-            <h2 class="text-lg font-bold mb-4" style="color: #002855;">Contact Information</h2>
+            <h2 class="text-lg font-bold mb-4 text-brand">Contact Information</h2>
             <div class="grid grid-cols-2 gap-6">
               @if (quote()!.orderDetails?.pickupContactName) {
                 <div>
@@ -184,13 +239,144 @@
               Reject Quote
             </button>
             <button
+              (click)="holdQuote()"
+              class="px-6 py-2 text-orange-700 border border-orange-300 rounded-lg hover:bg-orange-50 font-medium">
+              Hold Price
+            </button>
+            <button
               (click)="acceptQuote()"
-              class="px-6 py-2 text-white rounded-lg font-medium"
-              style="background-color: #003DA5;"
-              onmouseover="this.style.backgroundColor='#002855'"
-              onmouseout="this.style.backgroundColor='#003DA5'">
+              class="px-6 py-2 rounded-lg font-medium btn-accept">
               Accept Quote
             </button>
+          </div>
+        } @else if (isCustomer() && quote()!.status === 'On Hold') {
+          <div class="flex gap-3 justify-end">
+            <button
+              (click)="openHeldCreateModal()"
+              class="px-6 py-2 rounded-lg font-medium btn-accept">
+              Create Order from Held Quote
+            </button>
+
+            <!-- Held Quote Create Modal -->
+            @if (showHeldCreateModal()) {
+              <div class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+                <div class="bg-white rounded-lg shadow p-6 w-full max-w-2xl">
+                  <h3 class="text-lg font-semibold mb-4">Create Order from Held Quote</h3>
+
+                  <div class="grid grid-cols-1 gap-4">
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-1">Origin Name <span class="text-red-500">*</span></label>
+                      <input type="text" class="w-full border border-gray-300 rounded px-3 py-2" [value]="heldOriginName()" (input)="heldOriginName.set($event.target.value)" placeholder="Location name" />
+                    </div>
+
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-1">Origin Address</label>
+                      <div class="flex items-center gap-3">
+                        <input type="text" class="w-full border border-gray-300 rounded px-3 py-2" [value]="heldOriginAddress()" (input)="heldOriginAddress.set($event.target.value)" placeholder="Street address" />
+                        <button type="button" (click)="verifyHeldOriginAddress()" [disabled]="!((heldOriginAddress() || '').length >= 3)" class="btn-primary px-3 py-2 text-sm">Verify</button>
+                      </div>
+                      @if (heldOriginVerified() === true) {
+                        <p class="text-green-600 text-sm mt-2">✔ Address verified</p>
+                      } @else if (heldOriginVerified() === false) {
+                        <div class="text-sm mt-2">
+                          <p class="text-yellow-600">⚠ Address not verified (closest matches shown)</p>
+
+                          <!-- Show full list of suggestions when available -->
+                          @if (showHeldOriginSuggestions() && heldOriginSuggestions().length > 0) {
+                            <div class="mt-2 border p-2 bg-white rounded">
+                              @for (s of heldOriginSuggestions(); track s.id || i; let i = $index) {
+                                <div class="py-2 border-b last:border-b-0">
+                                  <div class="font-medium text-sm">{{ s.displayName || s.address }}</div>
+                                  <div class="text-xs text-gray-600">{{ s.city }}, {{ s.state }} {{ s.zip }}</div>
+                                  <div class="mt-1">
+                                    <a (click)="selectHeldOriginSuggestion(s)" class="text-sm text-blue-600">Use this suggestion</a>
+                                  </div>
+                                </div>
+                              }
+                            </div>
+                          } @else if (heldOriginTopSuggestion()) {
+                            <a (click)="selectHeldOriginSuggestion(heldOriginTopSuggestion())" class="text-sm text-blue-600">Use suggestion</a>
+                            <div class="mt-2 border p-2 bg-white rounded">
+                              <div class="font-medium text-sm">{{ heldOriginTopSuggestion()?.displayName || heldOriginTopSuggestion()?.address }}</div>
+                              <div class="text-xs text-gray-600">{{ heldOriginTopSuggestion()?.city }}, {{ heldOriginTopSuggestion()?.state }} {{ heldOriginTopSuggestion()?.zip }}</div>
+                            </div>
+                          }
+                        </div>
+                      }
+                    </div>
+
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-1">Destination Name <span class="text-red-500">*</span></label>
+                      <input type="text" class="w-full border border-gray-300 rounded px-3 py-2" [value]="heldDestinationName()" (input)="heldDestinationName.set($event.target.value)" placeholder="Location name" />
+                    </div>
+
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-1">Destination Address</label>
+                      <div class="flex items-center gap-3">
+                        <input type="text" class="w-full border border-gray-300 rounded px-3 py-2" [value]="heldDestinationAddress()" (input)="heldDestinationAddress.set($event.target.value)" placeholder="Street address" />
+                        <button type="button" (click)="verifyHeldDestinationAddress()" [disabled]="!((heldDestinationAddress() || '').length >= 3)" class="btn-primary px-3 py-2 text-sm">Verify</button>
+                      </div>
+                      @if (heldDestinationVerified() === true) {
+                        <p class="text-green-600 text-sm mt-2">✔ Address verified</p>
+                      } @else if (heldDestinationVerified() === false) {
+                        <div class="text-sm mt-2">
+                          <p class="text-yellow-600">⚠ Address not verified (closest matches shown)</p>
+
+                          <!-- Show full list of destination suggestions when available -->
+                          @if (showHeldDestinationSuggestions() && heldDestinationSuggestions().length > 0) {
+                            <div class="mt-2 border p-2 bg-white rounded">
+                              @for (s of heldDestinationSuggestions(); track s.id || i; let i = $index) {
+                                <div class="py-2 border-b last:border-b-0">
+                                  <div class="font-medium text-sm">{{ s.displayName || s.address }}</div>
+                                  <div class="text-xs text-gray-600">{{ s.city }}, {{ s.state }} {{ s.zip }}</div>
+                                  <div class="mt-1">
+                                    <a (click)="selectHeldDestinationSuggestion(s)" class="text-sm text-blue-600">Use this suggestion</a>
+                                  </div>
+                                </div>
+                              }
+                            </div>
+                          } @else if (heldDestinationTopSuggestion()) {
+                            <a (click)="selectHeldDestinationSuggestion(heldDestinationTopSuggestion())" class="text-sm text-blue-600">Use suggestion</a>
+                            <div class="mt-2 border p-2 bg-white rounded">
+                              <div class="font-medium text-sm">{{ heldDestinationTopSuggestion()?.displayName || heldDestinationTopSuggestion()?.address }}</div>
+                              <div class="text-xs text-gray-600">{{ heldDestinationTopSuggestion()?.city }}, {{ heldDestinationTopSuggestion()?.state }} {{ heldDestinationTopSuggestion()?.zip }}</div>
+                            </div>
+                          }
+                        </div>
+                      }
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                      <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Pickup Date</label>
+                        <input type="date" class="w-full border border-gray-300 rounded px-3 py-2" [value]="pickupAppointmentDate()" (input)="pickupAppointmentDate.set($event.target.value)" placeholder="Pickup date" />
+                      </div>
+                      <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Pickup Time</label>
+                        <input type="time" step="900" class="w-full border border-gray-300 rounded px-3 py-2" [value]="pickupAppointmentTime()" (input)="pickupAppointmentTime.set($event.target.value)" placeholder="Pickup time" />
+                      </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-4">
+                      <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Customer Shipment #</label>
+                        <input type="text" class="w-full border border-gray-300 rounded px-3 py-2" [value]="heldCustomerShipmentNumber()" (input)="heldCustomerShipmentNumber.set($event.target.value)" placeholder="Enter shipment number" />
+                      </div>
+                      <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Container</label>
+                        <input type="text" class="w-full border border-gray-300 rounded px-3 py-2" [value]="heldContainerNumber()" (input)="heldContainerNumber.set($event.target.value)" placeholder="UMAX 649754" />
+                      </div>
+                    </div>
+
+                    <div class="flex gap-3 justify-end">
+                      <button (click)="createOrderFromHeldQuote()" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">Create Order</button>
+                      <button (click)="openAcceptQuoteFromHeld()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Open Create Order Page</button>
+                      <button (click)="closeHeldCreateModal()" class="px-4 py-2 border border-gray-300 rounded">Cancel</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            }
           </div>
         }
       </div>

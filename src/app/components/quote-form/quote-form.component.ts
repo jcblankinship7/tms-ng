@@ -14,8 +14,10 @@ import { debounceTime, distinctUntilChanged, Subject } from 'rxjs';
 type InputType = 'zipcode' | 'citystate';
 
 interface LocationData {
-  latitude: number;
-  longitude: number;
+  // prefer structured position over top-level latitude/longitude when available
+  position?: { latitude: number; longitude: number };
+  latitude?: number;
+  longitude?: number;
   address: string;
   city: string;
   state: string;
@@ -556,8 +558,7 @@ export class QuoteFormComponent implements OnInit {
 
   selectExtraOriginLocation(result: LocationSearchResult): void {
     this.selectedExtraOrigin.set({
-      latitude: result.latitude,
-      longitude: result.longitude,
+      position: { latitude: result.position?.latitude ?? (result as any).latitude, longitude: result.position?.longitude ?? (result as any).longitude },
       address: result.address,
       city: result.city,
       state: result.state,
@@ -637,8 +638,7 @@ export class QuoteFormComponent implements OnInit {
 
   selectExtraDestinationLocation(result: LocationSearchResult): void {
     this.selectedExtraDestination.set({
-      latitude: result.latitude,
-      longitude: result.longitude,
+      position: { latitude: result.position?.latitude ?? (result as any).latitude, longitude: result.position?.longitude ?? (result as any).longitude },
       address: result.address,
       city: result.city,
       state: result.state,
@@ -784,8 +784,7 @@ export class QuoteFormComponent implements OnInit {
 
   selectOriginLocation(result: LocationSearchResult): void {
     this.selectedOrigin.set({
-      latitude: result.latitude,
-      longitude: result.longitude,
+      position: { latitude: result.position?.latitude ?? (result as any).latitude, longitude: result.position?.longitude ?? (result as any).longitude },
       address: result.address,
       city: result.city,
       state: result.state,
@@ -803,8 +802,7 @@ export class QuoteFormComponent implements OnInit {
 
   selectDestinationLocation(result: LocationSearchResult): void {
     this.selectedDestination.set({
-      latitude: result.latitude,
-      longitude: result.longitude,
+      position: { latitude: result.position?.latitude ?? (result as any).latitude, longitude: result.position?.longitude ?? (result as any).longitude },
       address: result.address,
       city: result.city,
       state: result.state,
@@ -836,24 +834,24 @@ export class QuoteFormComponent implements OnInit {
 
     const request: CreateQuoteRequest = {
       description: `Quote from ${origin.zipCode} to ${destination.zipCode}`,
-      originLatitude: origin.latitude,
-      originLongitude: origin.longitude,
+      originPosition: origin.position ? { latitude: origin.position.latitude, longitude: origin.position.longitude } : undefined,
       originZip: origin.zipCode,
       originAddress: origin.address,
       originCity: origin.city,
       originState: origin.state,
-      destinationLatitude: destination.latitude,
-      destinationLongitude: destination.longitude,
+      destinationPosition: destination.position ? { latitude: destination.position.latitude, longitude: destination.position.longitude } : undefined,
       destinationZip: destination.zipCode,
       destinationAddress: destination.address,
       destinationCity: destination.city,
       destinationState: destination.state,
       // Extra Origin (optional)
+      extraOriginPosition: extraOrigin?.position ? { latitude: extraOrigin.position.latitude, longitude: extraOrigin.position.longitude } : undefined,
       extraOriginZip: extraOrigin?.zipCode,
       extraOriginAddress: extraOrigin?.address,
       extraOriginCity: extraOrigin?.city,
       extraOriginState: extraOrigin?.state,
       // Extra Destination (optional)
+      extraDestinationPosition: extraDestination?.position ? { latitude: extraDestination.position.latitude, longitude: extraDestination.position.longitude } : undefined,
       extraDestinationZip: extraDestination?.zipCode,
       extraDestinationAddress: extraDestination?.address,
       extraDestinationCity: extraDestination?.city,

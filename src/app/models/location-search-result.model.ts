@@ -7,6 +7,9 @@ export interface LocationSearchResult {
   stateCode: string;
   zipCode: string;
   country: string;
-  latitude: number;
-  longitude: number;
+  // structured position preferred
+  position?: {
+    latitude?: number;
+    longitude?: number;
+  };
 }

@@ -70,34 +70,14 @@ export class ProfileModalComponent implements OnInit {
   private loadAssociatedCustomers(userId: string): void {
     this.loading.set(true);
     this.errorMessage.set(null);
-    console.log('Loading associated customers for user:', userId);
     
     this.customerService.getCustomersForUser(userId).subscribe({
       next: (customers) => {
-        console.log('Received customers from API:', customers);
-        console.log('API Response type:', typeof customers);
-        console.log('Is array?', Array.isArray(customers));
-        console.log('Length:', customers?.length);
-        
         if (!customers || customers.length === 0) {
-          console.log('No customers returned from API');
           this.associatedCustomers.set([]);
           this.loading.set(false);
           return;
         }
-        
-        // Log each customer's type for debugging
-        customers.forEach((c: any, i: number) => {
-          console.log(`Customer ${i}:`, {
-            id: c.id,
-            name: c.name,
-            type: c.type,
-            typeOf: typeof c.type,
-            typeString: String(c.type),
-            typeStringLower: (c.type as any) ? String(c.type).toLowerCase() : '',
-            keys: Object.keys(c)
-          });
-        });
         
         // Filter to only Broker type customers
         const brokerCustomers = customers.filter((c: any) => {
@@ -106,11 +86,8 @@ export class ProfileModalComponent implements OnInit {
           const typeNum = Number(c.type);
           
           const isBroker = typeStr === 'broker' || typeNum === 5;
-          console.log(`Filtering ${c.name}: typeStr='${typeStr}', typeNum=${typeNum}, isBroker=${isBroker}`);
           return isBroker;
         });
-        
-        console.log('Broker customers after filter:', brokerCustomers);
         this.associatedCustomers.set(brokerCustomers);
 
         // Set initial selected customer from context or first one

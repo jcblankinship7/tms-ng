@@ -62,11 +62,12 @@ export class MoveDetailComponent implements OnInit {
 
   getMoveTypeLabel(moveType: string): string {
     const typeMap: { [key: string]: string } = {
-      'ORIGIN_PICKUP': 'Origin Pickup',
-      'EXTRA_PICKUP': 'Extra Pickup',
-      'RAIL_MOVE': 'Rail Move',
-      'EXTRA_DELIVERY': 'Extra Delivery',
-      'FINAL_DELIVERY': 'Final Delivery'
+      'InitialPickup': 'Initial Pickup',
+      'ExtraPickup': 'Extra Pickup',
+      'Rail': 'Rail Move',
+      'ExtraDelivery': 'Extra Delivery',
+      'FinalDestination': 'Final Destination',
+      'OverTheRoad': 'Over the Road'
     };
     return typeMap[moveType] || moveType;
   }

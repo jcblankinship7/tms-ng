@@ -23,6 +23,7 @@ export class CustomerFormComponent implements OnInit {
   loading = signal(false);
   saving = signal(false);
   error = signal<string | null>(null);
+  resolvedPosition?: { latitude: number; longitude: number };
   availableUsers = signal<User[]>([]);
   availableBillTos = signal<any[]>([]);
   previousTypeWasOther = signal(false);
@@ -86,8 +87,6 @@ export class CustomerFormComponent implements OnInit {
       city: [''],
       state: ['', Validators.maxLength(2)],
       zip: [''],
-      latitude: [{ value: null, disabled: true }],
-      longitude: [{ value: null, disabled: true }],
       userIds: [[]],
       billToIds: [[]],
       providerType: [null],
@@ -209,8 +208,6 @@ export class CustomerFormComponent implements OnInit {
   loadCustomerUsers(): void {
     this.userService.getCustomerUsers().subscribe({
       next: (users) => {
-        console.log('Loaded customer users:', users);
-        console.log('Users filtered to only Customer persona:', users.filter(u => u.persona === UserPersona.Customer));
         const customerUsers = users.filter(u => u.persona === UserPersona.Customer);
         this.availableUsers.set(customerUsers);
       },
@@ -257,8 +254,6 @@ export class CustomerFormComponent implements OnInit {
     this.loading.set(true);
     this.customerService.getCustomer(id).subscribe({
       next: (customer) => {
-        console.log('Loaded customer:', customer);
-        
         const typeValue = this.stringEnumToNumber(customer.type) || CustomerType.Broker;
         const quoteTypeValue = this.stringEnumToNumber(customer.quoteType) || QuoteType.Spot;
         const providerTypeValue = customer.providerType ? this.stringEnumToNumber(customer.providerType) : null;
@@ -275,18 +270,10 @@ export class CustomerFormComponent implements OnInit {
           city: customer.city,
           state: customer.state,
           zip: customer.zip,
-          latitude: customer.latitude,
-          longitude: customer.longitude,
           userIds: customer.associatedUserIds || [],
           billToIds: customer.associatedBillToIds || [],
           providerType: providerTypeValue,
           status: 'active'
-        });
-
-        console.log('Form after patchValue:', {
-          type: this.form.get('type')?.value,
-          quoteType: this.form.get('quoteType')?.value,
-          billToIds: this.form.get('billToIds')?.value
         });
 
         this.form.markAsPristine();
@@ -310,11 +297,12 @@ export class CustomerFormComponent implements OnInit {
     this.saving.set(true);
     this.error.set(null);
 
-    // Use getRawValue() to include disabled form controls (latitude/longitude)
+    // Use getRawValue() and include resolved position if present
     const formValue = this.form.getRawValue();
+    const payload = this.resolvedPosition ? { ...formValue, position: this.resolvedPosition } : formValue;
 
     if (this.isEditMode() && this.customerId()) {
-      this.customerService.updateCustomer(this.customerId()!, formValue).subscribe({
+      this.customerService.updateCustomer(this.customerId()!, payload).subscribe({
         next: () => {
           this.router.navigate(['/admin/customers']);
         },
@@ -436,13 +424,8 @@ export class CustomerFormComponent implements OnInit {
       next: (results) => {
         if (results && results.length > 0) {
           const firstResult = results[0];
-          this.form.patchValue(
-            {
-              latitude: firstResult.latitude,
-              longitude: firstResult.longitude
-            },
-            { emitEvent: false }
-          );
+          this.resolvedPosition = { latitude: firstResult.position?.latitude ?? (firstResult as any).latitude, longitude: firstResult.position?.longitude ?? (firstResult as any).longitude };
+          // No form fields for coordinates anymore; keep resolvedPosition for saving and display
         }
       },
       error: (err) => {

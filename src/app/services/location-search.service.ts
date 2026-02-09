@@ -36,7 +36,6 @@ export class LocationSearchService {
     if (this.isCacheValid(query)) {
       const cachedResults = this.cache.get(query);
       if (cachedResults) {
-        console.log(`Returning cached results for: ${query}`);
         return of(cachedResults);
       }
     }

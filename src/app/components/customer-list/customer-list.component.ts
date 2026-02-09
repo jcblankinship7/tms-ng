@@ -31,11 +31,6 @@ export class CustomerListComponent implements OnInit {
 
     this.customerService.getCustomers().subscribe({
       next: (data) => {
-        console.log('Loaded customers:', data);
-        if (data.length > 0) {
-          console.log('First customer type:', data[0].type, 'Type of:', typeof data[0].type);
-          console.log('First customer quoteType:', data[0].quoteType, 'Type of:', typeof data[0].quoteType);
-        }
         this.customers.set(data);
         this.loading.set(false);
       },
@@ -48,8 +43,6 @@ export class CustomerListComponent implements OnInit {
   }
 
   getCustomerTypeName(type: CustomerType | number | string): string {
-    console.log('getCustomerTypeName called with:', type, 'Type of:', typeof type);
-    
     // Handle string values (camelCase from API)
     if (typeof type === 'string') {
       const typeStr = type.toLowerCase();
@@ -92,8 +85,6 @@ export class CustomerListComponent implements OnInit {
   }
 
   getQuoteTypeName(quoteType: QuoteType | number | string): string {
-    console.log('getQuoteTypeName called with:', quoteType, 'Type of:', typeof quoteType);
-    
     // Handle string values (camelCase from API)
     if (typeof quoteType === 'string') {
       const typeStr = quoteType.toLowerCase();

@@ -21,6 +21,7 @@ export class TerminalFormComponent implements OnInit {
   terminalId: number | null = null;
   loading = false;
   error: string | null = null;
+  resolvedPosition?: { latitude: number; longitude: number };
   TerminalStatus = TerminalStatus;
 
   constructor(
@@ -36,8 +37,6 @@ export class TerminalFormComponent implements OnInit {
       city: ['', [Validators.required, Validators.maxLength(100)]],
       state: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(2)]],
       zip: ['', [Validators.required, Validators.maxLength(10)]],
-      latitude: [{ value: null, disabled: true }],
-      longitude: [{ value: null, disabled: true }],
       railroad: ['', [Validators.required, Validators.maxLength(200)]],
       status: [{ value: TerminalStatus.Active, disabled: true }],
       isTwentyFourSevenHours: [false],
@@ -81,8 +80,6 @@ export class TerminalFormComponent implements OnInit {
           city: terminal.city,
           state: terminal.state,
           zip: terminal.zip,
-          latitude: terminal.latitude,
-          longitude: terminal.longitude,
           railroad: terminal.railroad,
           status: normalizedStatus,
           mondayHours: terminal.mondayHours,
@@ -100,6 +97,9 @@ export class TerminalFormComponent implements OnInit {
           saturdayFlipHours: terminal.saturdayFlipHours,
           sundayFlipHours: terminal.sundayFlipHours
         }, { emitEvent: false });
+
+        // Load resolved position from terminal object (new shape) or fallback to legacy fields
+        this.resolvedPosition = terminal.position ?? ({ latitude: (terminal as any).latitude, longitude: (terminal as any).longitude });
 
         this.terminalForm.patchValue({
           isTwentyFourSevenHours: this.isTwentyFourSevenHours(),
@@ -145,7 +145,8 @@ export class TerminalFormComponent implements OnInit {
 
     const terminalData = this.terminalForm.getRawValue();
 
-    if (!terminalData.latitude || !terminalData.longitude) {
+    // If we do not have resolved position yet, try resolving from address
+    if (!this.resolvedPosition) {
       this.resolveCoordinates(terminalData).then((coords) => {
         if (!coords) {
           this.error = 'Unable to resolve coordinates from the address. Please verify the address.';
@@ -153,12 +154,13 @@ export class TerminalFormComponent implements OnInit {
           return;
         }
 
-        this.terminalForm.patchValue({
-          latitude: coords.latitude,
-          longitude: coords.longitude
-        });
+        // Store resolved structured position
+        const lat = coords.position?.latitude ?? (coords as any).latitude;
+        const lng = coords.position?.longitude ?? (coords as any).longitude;
+        this.resolvedPosition = { latitude: lat, longitude: lng };
 
-        save({ ...terminalData, latitude: coords.latitude, longitude: coords.longitude });
+        // Save payload with position field instead of top-level latitude/longitude
+        save({ ...terminalData, position: { latitude: lat, longitude: lng } });
       });
       return;
     }
@@ -201,8 +203,6 @@ export class TerminalFormComponent implements OnInit {
       'city',
       'state',
       'zip',
-      'latitude',
-      'longitude',
       'railroad',
       'status'
     ];
@@ -242,10 +242,8 @@ export class TerminalFormComponent implements OnInit {
         this.resolveCoordinates({ address, city, state, zip }).then((coords) => {
           if (!coords) return;
 
-          this.terminalForm.patchValue({
-            latitude: coords.latitude,
-            longitude: coords.longitude
-          }, { emitEvent: false });
+          this.resolvedPosition = { latitude: coords.position?.latitude ?? (coords as any).latitude, longitude: coords.position?.longitude ?? (coords as any).longitude };
+          // No form fields for coordinates anymore; keep resolvedPosition for saving and display
         });
       });
   }

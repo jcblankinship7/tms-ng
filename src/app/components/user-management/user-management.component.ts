@@ -2,6 +2,7 @@ import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { UserService } from '../../services/user.service';
+import { AuthService } from '../../services/auth.service';
 import { User, UserPersona } from '../../models/user.model';
 
 @Component({
@@ -29,6 +30,16 @@ export class UserManagementComponent implements OnInit {
   editingLastName = signal<string | null>(null);
   confirmingEmailUserId = signal<string | null>(null);
 
+  // Reset password modal state
+  showResetModal = signal(false);
+  resetUserId = signal<string | null>(null);
+  resetUserName = signal<string | null>(null);
+  resetPassword = signal<string>('');
+  resetConfirmPassword = signal<string>('');
+  resettingPassword = signal(false);
+  showResetSuccessModal = signal(false);
+  resetSuccessMessage = signal<string>('');
+
   // Modal state for custom delete confirmation
   showDeleteModal = signal(false);
   userIdToDelete = signal<string | null>(null);
@@ -49,7 +60,7 @@ export class UserManagementComponent implements OnInit {
     { value: UserPersona.OperationClerk, label: 'Operation Clerk' }
   ];
 
-  constructor(private userService: UserService) {}
+  constructor(private userService: UserService, private authService: AuthService) {}
 
   ngOnInit(): void {
     this.loadUsers();
@@ -138,7 +149,6 @@ export class UserManagementComponent implements OnInit {
       firstName: newFirstName,
       lastName: newLastName
     };
-    console.log('UpdateUser payload:', payload);
     this.userService.updateUser(userId, payload).subscribe({
       next: () => {
         this.editingUserId.set(null);
@@ -202,5 +212,62 @@ export class UserManagementComponent implements OnInit {
   cancelDeleteUser(): void {
     this.showDeleteModal.set(false);
     this.userIdToDelete.set(null);
+  }
+
+  isAdmin(): boolean {
+    return this.authService.isAdmin();
+  }
+
+  openResetPassword(user: User): void {
+    this.resetUserId.set(user.id);
+    this.resetUserName.set(`${user.firstName} ${user.lastName}`.trim() || user.email);
+    this.resetPassword.set('');
+    this.resetConfirmPassword.set('');
+    this.showResetModal.set(true);
+  }
+
+  cancelResetPassword(): void {
+    this.showResetModal.set(false);
+    this.resetUserId.set(null);
+    this.resetUserName.set(null);
+    this.resetPassword.set('');
+    this.resetConfirmPassword.set('');
+  }
+
+  confirmResetPassword(): void {
+    const userId = this.resetUserId();
+    const newPassword = this.resetPassword();
+    const confirmPassword = this.resetConfirmPassword();
+
+    if (!userId) return;
+    if (!newPassword || newPassword.length < 8) {
+      this.showToast('Password must be at least 8 characters', 'error');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      this.showToast('Passwords do not match', 'error');
+      return;
+    }
+
+    this.resettingPassword.set(true);
+    this.userService.adminResetPassword(userId, newPassword, confirmPassword).subscribe({
+      next: () => {
+        this.resettingPassword.set(false);
+        this.cancelResetPassword();
+        this.resetSuccessMessage.set('Password reset successfully.');
+        this.showResetSuccessModal.set(true);
+        this.showToast('Password reset successfully', 'success');
+      },
+      error: (err) => {
+        this.resettingPassword.set(false);
+        this.showToast(err.error?.message || 'Failed to reset password', 'error');
+        console.error('Error resetting password:', err);
+      }
+    });
+  }
+
+  closeResetSuccessModal(): void {
+    this.showResetSuccessModal.set(false);
+    this.resetSuccessMessage.set('');
   }
 }

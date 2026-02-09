@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { OrderService } from '../../services/order.service';
+import { AuthService } from '../../services/auth.service';
 import { Order, Move, MoveType } from '../../models/order.model'; // ✅ import shared models
 
 @Component({
@@ -17,14 +18,32 @@ export class OrderDetailComponent implements OnInit {
   order = signal<Order | null>(null); // now uses shared model
   successMessage = signal('');
   errorMessage = signal('');
+  isReadOnly = signal(false);
+  expandedMoveId = signal<string | null>(null);
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private orderService: OrderService
+    private orderService: OrderService,
+    private authService: AuthService
   ) { }
 
   ngOnInit(): void {
+    const persona = this.authService.getPersona();
+    const isCustomerPersona = (persona || '').toLowerCase() === 'customer';
+    const path = window.location.pathname || this.router.url || '';
+    const isCustomerRoute = path.toLowerCase().startsWith('/customer/');
+    this.isReadOnly.set(isCustomerPersona || isCustomerRoute);
+
+    // If navigation included a preview order object, use it immediately to avoid a blank UI
+    const nav = this.router.getCurrentNavigation();
+    const stateOrder = nav?.extras?.state?.['order'] || (window as any).history?.state?.['order'];
+    if (stateOrder) {
+      this.order.set(stateOrder);
+      this.loading.set(false);
+      return;
+    }
+
     const orderId = this.route.snapshot.paramMap.get('id');
     if (orderId) {
       this.loadOrder(orderId);
@@ -38,7 +57,12 @@ export class OrderDetailComponent implements OnInit {
     this.loading.set(true);
     this.orderService.getOrderById(orderId).subscribe({
       next: (data) => {
-        this.order.set(data ?? null);
+        if (!data) {
+          this.order.set(null);
+          this.errorMessage.set('Order not found');
+        } else {
+          this.order.set(data);
+        }
         this.loading.set(false);
       },
       error: (err) => {
@@ -55,6 +79,23 @@ export class OrderDetailComponent implements OnInit {
 
   viewOrder(orderId: string): void {
     this.router.navigate(['/order', orderId]);
+  }
+
+  isCustomerReadOnly(): boolean {
+    const path = window.location.pathname || this.router.url || '';
+    return this.isReadOnly() || path.toLowerCase().includes('/customer/order');
+  }
+
+  getInitialPickupMove(): Move | undefined {
+    return this.order()?.moves.find(m => m.moveType === MoveType.INITIAL_PICKUP);
+  }
+
+  getFinalDestinationMove(): Move | undefined {
+    return this.order()?.moves.find(m => m.moveType === MoveType.FINAL_DESTINATION);
+  }
+
+  toggleMoveDetails(moveId: string): void {
+    this.expandedMoveId.set(this.expandedMoveId() === moveId ? null : moveId);
   }
 
   // --- Move logic ---
@@ -115,7 +156,7 @@ export class OrderDetailComponent implements OnInit {
     if (!currentOrder) return;
 
     const move = currentOrder.moves[index];
-    if ([MoveType.ORIGIN_PICKUP, MoveType.FINAL_DELIVERY].includes(move.moveType)) {
+    if ([MoveType.INITIAL_PICKUP, MoveType.FINAL_DESTINATION].includes(move.moveType)) {
       this.errorMessage.set('Cannot remove origin pickup or final delivery moves');
       setTimeout(() => this.errorMessage.set(''), 3000);
       return;
@@ -131,6 +172,9 @@ export class OrderDetailComponent implements OnInit {
   }
 
   onMoveFieldChange(move: Move, field: 'destination'): void {
+    if (this.isCustomerReadOnly()) {
+      return;
+    }
     move.isDirty = !this.isMoveComplete(move);
 
     // Update the origin of the next move if it exists
@@ -145,27 +189,29 @@ export class OrderDetailComponent implements OnInit {
   }
 
   isTerminalMove(moveType: MoveType): boolean {
-    return moveType === MoveType.RAIL_MOVE;
+    return moveType === MoveType.RAIL;
   }
 
   getMoveTypeLabel(moveType: MoveType): string {
     const labels: Record<MoveType, string> = {
-      [MoveType.ORIGIN_PICKUP]: 'Origin Pickup',
+      [MoveType.INITIAL_PICKUP]: 'Initial Pickup',
       [MoveType.EXTRA_PICKUP]: 'Extra Pickup',
-      [MoveType.RAIL_MOVE]: 'Rail Move',
+      [MoveType.RAIL]: 'Rail Move',
       [MoveType.EXTRA_DELIVERY]: 'Extra Delivery',
-      [MoveType.FINAL_DELIVERY]: 'Final Delivery'
+      [MoveType.FINAL_DESTINATION]: 'Final Destination',
+      [MoveType.OVER_THE_ROAD]: 'Over the Road'
     };
     return labels[moveType];
   }
 
   getMoveTypeDescription(moveType: MoveType): string {
     const descriptions: Record<MoveType, string> = {
-      [MoveType.ORIGIN_PICKUP]: 'Initial pickup location',
+      [MoveType.INITIAL_PICKUP]: 'Initial pickup location',
       [MoveType.EXTRA_PICKUP]: 'Additional pickup before rail',
-      [MoveType.RAIL_MOVE]: 'Terminal to terminal transport',
+      [MoveType.RAIL]: 'Terminal to terminal transport',
       [MoveType.EXTRA_DELIVERY]: 'Additional delivery after rail',
-      [MoveType.FINAL_DELIVERY]: 'Final delivery destination'
+      [MoveType.FINAL_DESTINATION]: 'Final delivery destination',
+      [MoveType.OVER_THE_ROAD]: 'Over the road transport'
     };
     return descriptions[moveType];
   }
@@ -183,7 +229,10 @@ export class OrderDetailComponent implements OnInit {
     this.saving.set(true);
     this.errorMessage.set('');
     
-    this.orderService.updateOrder(currentOrder.id, currentOrder.moves).subscribe({
+    this.orderService.updateOrder(currentOrder.id, currentOrder.moves, {
+      customerShipmentNumber: currentOrder.customerShipmentNumber,
+      containerNumber: currentOrder.containerNumber
+    }).subscribe({
       next: (updatedOrder) => {
         this.saving.set(false);
         if (updatedOrder) {

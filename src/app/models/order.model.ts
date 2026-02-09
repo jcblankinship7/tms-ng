@@ -2,6 +2,9 @@
 export interface Stop {
   zip: string;
   address: string;
+  city?: string;
+  state?: string;
+  name?: string;
 }
 
 // Shipment details for a move
@@ -16,11 +19,12 @@ export interface ShipmentDetails {
 
 // Types of moves in an order
 export enum MoveType {
-  ORIGIN_PICKUP = 'ORIGIN_PICKUP',
-  EXTRA_PICKUP = 'EXTRA_PICKUP',
-  RAIL_MOVE = 'RAIL_MOVE',
-  EXTRA_DELIVERY = 'EXTRA_DELIVERY',
-  FINAL_DELIVERY = 'FINAL_DELIVERY'
+  INITIAL_PICKUP = 'InitialPickup',
+  EXTRA_PICKUP = 'ExtraPickup',
+  RAIL = 'Rail',
+  EXTRA_DELIVERY = 'ExtraDelivery',
+  FINAL_DESTINATION = 'FinalDestination',
+  OVER_THE_ROAD = 'OverTheRoad'
 }
 
 // Represents a single move in an order
@@ -43,11 +47,24 @@ export interface Move {
 // Represents a customer order
 export interface Order {
   id: string;
+  orderNumber?: string;
   customerId: string;
   status: string;
   createdDate: string;
   totalPrice: number;
   moves: Move[];
+  customerShipmentNumber?: string;
+  containerNumber?: string;
+  shipperName?: string;
+  shipperAddress?: string;
+  shipperCity?: string;
+  shipperState?: string;
+  shipperZip?: string;
+  consigneeName?: string;
+  consigneeAddress?: string;
+  consigneeCity?: string;
+  consigneeState?: string;
+  consigneeZip?: string;
   beneficialOwnerId?: number;
   beneficialOwnerName?: string;
   brokerCustomerId?: number;

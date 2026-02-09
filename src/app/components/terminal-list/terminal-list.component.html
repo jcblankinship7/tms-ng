@@ -70,7 +70,7 @@
           </td>
           <td>{{ terminal.railroad }}</td>
           <td class="coordinates">
-            <div>{{ terminal.latitude | number:'1.4-4' }}, {{ terminal.longitude | number:'1.4-4' }}</div>
+            <div>{{ terminal.position?.latitude | number:'1.4-4' }}, {{ terminal.position?.longitude | number:'1.4-4' }}</div>
           </td>
           <td>
             <span [class]="'status-badge ' + getStatusClass(terminal.status)">
@@ -112,7 +112,7 @@
           </div>
           <div>
             <div class="font-semibold text-gray-900">Coordinates</div>
-            <div>{{ selectedTerminal.latitude | number:'1.4-4' }}, {{ selectedTerminal.longitude | number:'1.4-4' }}</div>
+            <div>{{ selectedTerminal.position?.latitude | number:'1.4-4' }}, {{ selectedTerminal.position?.longitude | number:'1.4-4' }}</div>
           </div>
           <div>
             <div class="font-semibold text-gray-900">Status</div>

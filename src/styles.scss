@@ -18,6 +18,12 @@
   --gray-light: #e5e7eb;
   --background: #f9fafb;
   --white: #ffffff;
+  --brand: #002855;
+  --brand-strong: #003DA5;
+  --muted: #53565A;
+  --dim-border: #D0D0CE;
+  --info-light: #E5F0FF;
+  --warning-gold: #FFB81C;
 }
 
 
@@ -150,6 +156,19 @@ h1, h2, h3, h4, h5, h6 {
   border-bottom: 2px solid var(--gray-light);
 }
 
+/* Branding utilities to replace inline styles */
+.text-brand { color: var(--brand); }
+.text-brand-strong { color: var(--brand-strong); }
+.text-muted { color: var(--muted); padding-bottom: 1rem; }
+.bg-brand-strong { background-color: var(--brand-strong); }
+.bg-info-light { background-color: var(--info-light); }
+.bg-danger { background-color: var(--error); color: var(--white); }
+.bg-success { background-color: var(--success); color: var(--white); }
+.bg-warning-gold { background-color: var(--warning-gold); color: var(--white); }
+.border-dim { border: 1px solid var(--dim-border); }
+.border-top-accent { border-top-color: var(--primary-light); }
+.gradient-muted { background: linear-gradient(135deg, #F8F8F8 0%, #E8E8E8 100%); }
+
 .badge {
   padding: 0.25rem 0.75rem;
   border-radius: 9999px;
@@ -178,6 +197,10 @@ h1, h2, h3, h4, h5, h6 {
 
 
 /* App Shell / Header Styles */
+
+/* Layout utilities */
+.two-column-4-1 { display: grid; grid-template-columns: 4fr 1fr; align-items: flex-start; }
+
 .app-shell {
   background-color: var(--background);
 }
@@ -265,4 +288,27 @@ h1, h2, h3, h4, h5, h6 {
   .text-strong {
     @apply font-semibold text-gray-900;
   }
+  .text-warning-gold { color: var(--warning-gold); }
+  .text-primary-light { color: var(--primary-light); }
+
+  /* Login and button utilities */
+  .login-input {
+    border-color: var(--dim-border);
+  }
+  .login-input:focus {
+    border-color: var(--brand-strong);
+    box-shadow: 0 0 0 3px rgba(0, 61, 165, 0.1);
+    outline: none;
+  }
+
+  .btn-accept {
+    background-color: var(--brand-strong);
+    color: var(--white);
+    transition: background-color 0.15s ease-in-out;
+  }
+  .btn-accept:hover:not(:disabled) {
+    background-color: var(--brand);
+  }
+
+  .text-brand-strong { color: var(--brand-strong); }
 }

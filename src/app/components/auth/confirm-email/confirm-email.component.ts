@@ -24,16 +24,11 @@ export class ConfirmEmailComponent implements OnInit {
     const userId = this.route.snapshot.queryParamMap.get('userId');
     const token = this.route.snapshot.queryParamMap.get('token');
 
-    console.log('Confirm Email - UserId:', userId);
-    console.log('Confirm Email - Token:', token);
-
     if (!userId || !token) {
       this.message = 'Invalid confirmation link.';
       this.isLoading = false;
       return;
     }
-
-    console.log('Sending to backend:', { userId, token });
 
     this.authService.confirmEmail({ userId, token }).subscribe({
       next: (response) => {

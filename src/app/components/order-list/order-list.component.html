@@ -22,14 +22,14 @@
 
   <!-- Customer Selector (for multi-customer personas) -->
   @if (showCustomerSelector()) {
-    <div class="mb-6 bg-white p-5 rounded-lg shadow-md" style="border: 1px solid #D0D0CE;">
-      <label class="block text-xs font-bold uppercase tracking-wider mb-3" style="color: #53565A;">Select Customer</label>
+    <div class="mb-6 bg-white p-5 rounded-lg shadow-md border-dim">
+      <label class="block text-xs font-bold uppercase tracking-wider mb-3 text-muted">Select Customer</label>
       <select
         title="Select Customer"
         [value]="selectedCustomerId() || ''"
         (change)="onCustomerChanged($any($event).target.value)"
         class="w-full max-w-sm px-4 py-3 border-2 rounded font-semibold transition-all"
-        style="border-color: #D0D0CE; color: #002855;"
+        class="border-dim text-brand"
         onfocus="this.style.borderColor='#003DA5'"
         onblur="this.style.borderColor='#D0D0CE'">
         <option value="">All Customers</option>
@@ -196,7 +196,7 @@
                 <td class="px-6 py-4">
                   <span
                     class="px-2 py-1 text-xs rounded-full font-medium"
-                    style="background-color: #E5F0FF; color: #003DA5;">
+                    class="bg-info-light text-brand-strong">
                     {{ move.moveType }}
                   </span>
                 </td>

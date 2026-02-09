@@ -5,13 +5,12 @@ import { map, delay } from 'rxjs/operators';
 import { Quote, Move, Terminal, MoveType } from '../models/order.model';
 
 export type QuoteType = 'Spot' | 'Custom';
-export type QuoteStatus = 'Draft' | 'Submitted' | 'Quoted' | 'Accepted' | 'Rejected' | 'Expired';
+export type QuoteStatus = 'Draft' | 'Submitted' | 'Quoted' | 'On Hold' | 'Accepted' | 'Rejected' | 'Expired';
 export type StopType = 'Stay' | 'Drop';
 
 export interface CreateQuoteRequest {
   description: string;
-  originLatitude?: number;
-  originLongitude?: number;
+  originPosition?: { latitude?: number; longitude?: number };
   originAddress?: string;
   originCity?: string;
   originState?: string;
@@ -20,8 +19,8 @@ export interface CreateQuoteRequest {
   extraOriginAddress?: string;
   extraOriginCity?: string;
   extraOriginState?: string;
-  destinationLatitude?: number;
-  destinationLongitude?: number;
+  extraOriginPosition?: { latitude?: number; longitude?: number };
+  destinationPosition?: { latitude?: number; longitude?: number };
   destinationAddress?: string;
   destinationCity?: string;
   destinationState?: string;
@@ -30,6 +29,7 @@ export interface CreateQuoteRequest {
   extraDestinationAddress?: string;
   extraDestinationCity?: string;
   extraDestinationState?: string;
+  extraDestinationPosition?: { latitude?: number; longitude?: number };
   originStopType?: StopType;
   extraOriginStopType?: StopType;
   extraDestinationStopType?: StopType;
@@ -49,6 +49,12 @@ export interface QuoteRequest {
   expiryDate?: string;
   origin: string;
   destination: string;
+  originCity?: string;
+  originState?: string;
+  originZip?: string;
+  destinationCity?: string;
+  destinationState?: string;
+  destinationZip?: string;
   weight?: number;
   specialHandling?: string;
   quotedPrice?: number;
@@ -61,6 +67,10 @@ export interface QuoteRequest {
   pickupAppointmentTime?: string;
   deliveryAppointmentDate?: string;
   deliveryAppointmentTime?: string;
+  originStopType?: StopType;
+  extraOriginStopType?: StopType;
+  extraDestinationStopType?: StopType;
+  destinationStopType?: StopType;
   // Order details for custom quotes
   orderDetails?: {
     pickupLocation?: string;
@@ -80,7 +90,15 @@ export interface QuoteRequest {
   fuelSurcharge?: number;
   pickupCost?: number;
   deliveryCost?: number;
-  moves?: Array<{ id?: string; origin: { zip?: string; address?: string }; destination: { zip?: string; address?: string } }>;
+  moves?: Array<{ 
+    moveNumber?: number;
+    moveType?: string;
+    originStop?: { name?: string; address?: string; city?: string; state?: string; zipCode?: string }; 
+    destinationStop?: { name?: string; address?: string; city?: string; state?: string; zipCode?: string };
+    id?: string; 
+    origin?: { zip?: string; address?: string; city?: string; state?: string }; 
+    destination?: { zip?: string; address?: string; city?: string; state?: string } 
+  }>;
   // Customer tracking
   brokerCustomerId?: number;
   brokerCustomerName?: string;
@@ -103,6 +121,21 @@ export class QuoteService {
   // Drafts are stored client-side per-user (localStorage) because backend does not currently expose a drafts API.
   // Live quotes are fetched from the backend via the /api/quotes/my endpoint.
 
+  private mapStopType(value: any): StopType | undefined {
+    if (value === null || value === undefined) return undefined;
+    if (typeof value === 'string') {
+      const normalized = value.toLowerCase();
+      if (normalized === 'stay') return 'Stay';
+      if (normalized === 'drop') return 'Drop';
+      return undefined;
+    }
+    if (typeof value === 'number') {
+      if (value === 1) return 'Stay';
+      if (value === 2) return 'Drop';
+    }
+    return undefined;
+  }
+
   private mapApiToQuoteRequest(api: any): QuoteRequest {
     // Handle server-side drafts (they include a 'payload' object and are identified by lacking typical quote fields)
     if (api && api.payload) {
@@ -118,7 +151,8 @@ export class QuoteService {
         quoteNumber: draftNumber,
         quoteType: payload?.quoteType || 'Custom',
         status: 'Draft',
-        createdDate: api.createdAt ? new Date(api.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        // Preserve full ISO timestamp so UI can render date + time correctly
+        createdDate: api.createdAt ? new Date(api.createdAt).toISOString() : new Date().toISOString(),
         submittedDate: undefined,
         expiryDate: undefined,
         origin: payload?.origin || payload?.originZip || '',
@@ -133,6 +167,10 @@ export class QuoteService {
         pickupAppointmentTime: undefined,
         deliveryAppointmentDate: undefined,
         deliveryAppointmentTime: undefined,
+        originStopType: this.mapStopType(payload?.originStopType ?? payload?.OriginStopType),
+        extraOriginStopType: this.mapStopType(payload?.extraOriginStopType ?? payload?.ExtraOriginStopType),
+        extraDestinationStopType: this.mapStopType(payload?.extraDestinationStopType ?? payload?.ExtraDestinationStopType),
+        destinationStopType: this.mapStopType(payload?.destinationStopType ?? payload?.DestinationStopType),
         orderDetails: payload?.orderDetails,
         shipmentDetails: payload?.shipmentDetails,
         brokerCustomerId: api.brokerCustomerId || payload?.brokerCustomerId,
@@ -142,17 +180,64 @@ export class QuoteService {
       } as QuoteRequest;
     }
 
+    const originCity = api.moves && api.moves[0] ? api.moves[0].OriginStop?.City : undefined;
+    const originState = api.moves && api.moves[0] ? api.moves[0].OriginStop?.State : undefined;
+    const originZip = api.moves && api.moves[0] ? api.moves[0].OriginStop?.ZipCode : undefined;
+    const destCity = api.moves && api.moves.length > 0 ? api.moves[api.moves.length-1].DestinationStop?.City : undefined;
+    const destState = api.moves && api.moves.length > 0 ? api.moves[api.moves.length-1].DestinationStop?.State : undefined;
+    const destZip = api.moves && api.moves.length > 0 ? api.moves[api.moves.length-1].DestinationStop?.ZipCode : undefined;
+
+    // Map moves from API response
+    const moves = api.moves && Array.isArray(api.moves) ? api.moves.map((move: any) => ({
+      id: move.id,
+      moveNumber: move.moveNumber,
+      moveType: move.moveType,
+      originStop: move.originStop ? {
+        name: move.originStop.name,
+        address: move.originStop.address,
+        city: move.originStop.city,
+        state: move.originStop.state,
+        zipCode: move.originStop.zipCode
+      } : undefined,
+      destinationStop: move.destinationStop ? {
+        name: move.destinationStop.name,
+        address: move.destinationStop.address,
+        city: move.destinationStop.city,
+        state: move.destinationStop.state,
+        zipCode: move.destinationStop.zipCode
+      } : undefined,
+      origin: { 
+        zip: move.originStop?.zipCode, 
+        address: move.originStop?.address,
+        city: move.originStop?.city,
+        state: move.originStop?.state
+      },
+      destination: { 
+        zip: move.destinationStop?.zipCode, 
+        address: move.destinationStop?.address,
+        city: move.destinationStop?.city,
+        state: move.destinationStop?.state
+      }
+    })) : undefined;
+
     return {
       id: api.id,
       customerId: String(api.brokerCustomerId || ''),
       quoteNumber: api.quoteNumber || api.id || '',
       quoteType: api.route != null || api.moves?.length > 0 ? (api.description?.toLowerCase().includes('custom') ? 'Custom' : (api.description?.toLowerCase().includes('spot') ? 'Spot' : (api.quoteType || 'Spot'))) : (api.quoteType || 'Spot'),
       status: api.status || 'Quoted',
-      createdDate: api.createdAt ? new Date(api.createdAt).toISOString().split('T')[0] : (api.createdDate || new Date().toISOString().split('T')[0]),
+      // Preserve full ISO timestamp so UI can render date + time correctly
+      createdDate: api.createdAt ? new Date(api.createdAt).toISOString() : (api.createdDate || new Date().toISOString()),
       submittedDate: api.submittedDate,
       expiryDate: api.expiryDate,
-      origin: api.origin || (api.moves && api.moves[0] ? `${api.moves[0].OriginStop?.City || ''} (${api.moves[0].OriginStop?.ZipCode || ''})` : ''),
-      destination: api.destination || (api.moves && api.moves.length>0 ? `${api.moves[api.moves.length-1].DestinationStop?.City || ''} (${api.moves[api.moves.length-1].DestinationStop?.ZipCode || ''})` : ''),
+      origin: api.origin || (originCity && originZip ? `${originCity} (${originZip})` : ''),
+      destination: api.destination || (destCity && destZip ? `${destCity} (${destZip})` : ''),
+      originCity,
+      originState,
+      originZip,
+      destinationCity: destCity,
+      destinationState: destState,
+      destinationZip: destZip,
       weight: api.weight || undefined,
       specialHandling: api.specialHandling || undefined,
       quotedPrice: api.totalPrice || api.quotedPrice || undefined,
@@ -163,10 +248,15 @@ export class QuoteService {
       pickupAppointmentTime: api.pickupAppointmentTime,
       deliveryAppointmentDate: api.deliveryAppointmentDate,
       deliveryAppointmentTime: api.deliveryAppointmentTime,
+      originStopType: this.mapStopType(api.originStopType ?? api.OriginStopType),
+      extraOriginStopType: this.mapStopType(api.extraOriginStopType ?? api.ExtraOriginStopType),
+      extraDestinationStopType: this.mapStopType(api.extraDestinationStopType ?? api.ExtraDestinationStopType),
+      destinationStopType: this.mapStopType(api.destinationStopType ?? api.DestinationStopType),
       orderDetails: api.orderDetails,
       shipmentDetails: api.shipmentDetails,
       brokerCustomerId: api.brokerCustomerId,
-      brokerCustomerName: api.brokerCustomerName
+      brokerCustomerName: api.brokerCustomerName,
+      moves
     } as QuoteRequest; 
   }
 
@@ -180,18 +270,38 @@ export class QuoteService {
         // Moves are now created by the backend, we just need to map them
         if (response.moves && Array.isArray(response.moves)) {
           response.moves.forEach((move: any, index: number) => {
+            // Map the moveType from the API response
+            let moveType: MoveType = MoveType.RAIL;
+            if (move.moveType === 'InitialPickup') {
+              moveType = MoveType.INITIAL_PICKUP;
+            } else if (move.moveType === 'ExtraPickup') {
+              moveType = MoveType.EXTRA_PICKUP;
+            } else if (move.moveType === 'Rail') {
+              moveType = MoveType.RAIL;
+            } else if (move.moveType === 'ExtraDelivery') {
+              moveType = MoveType.EXTRA_DELIVERY;
+            } else if (move.moveType === 'FinalDestination') {
+              moveType = MoveType.FINAL_DESTINATION;
+            } else if (move.moveType === 'OverTheRoad') {
+              moveType = MoveType.OVER_THE_ROAD;
+            }
+
             moves.push({
               id: move.id || `MOV-${quoteId}-${index + 1}`,
               orderNumber: quoteId,
               moveOrder: index + 1,
-              moveType: this.getMoveType(index, response.moves.length),
+              moveType: moveType,
               origin: { 
-                zip: move.originStop?.zipCode || '', 
-                address: move.originStop?.terminalName || move.originStop?.address || `Stop ${index + 1}`
+                zip: move.originStop?.zipCode || move.OriginStop?.ZipCode || '', 
+                address: move.originStop?.address || move.OriginStop?.Address || '',
+                city: move.originStop?.city || move.OriginStop?.City || '',
+                state: move.originStop?.state || move.OriginStop?.State || ''
               },
               destination: { 
-                zip: move.destinationStop?.zipCode || '', 
-                address: move.destinationStop?.terminalName || move.destinationStop?.address || `Stop ${index + 2}`
+                zip: move.destinationStop?.zipCode || move.DestinationStop?.ZipCode || '', 
+                address: move.destinationStop?.address || move.DestinationStop?.Address || '',
+                city: move.destinationStop?.city || move.DestinationStop?.City || '',
+                state: move.destinationStop?.state || move.DestinationStop?.State || ''
               }
             });
           });
@@ -212,9 +322,9 @@ export class QuoteService {
   }
 
   private getMoveType(index: number, totalMoves: number): MoveType {
-    if (index === 0) return MoveType.ORIGIN_PICKUP;
-    if (index === totalMoves - 1) return MoveType.FINAL_DELIVERY;
-    return MoveType.RAIL_MOVE;
+    if (index === 0) return MoveType.INITIAL_PICKUP;
+    if (index === totalMoves - 1) return MoveType.FINAL_DESTINATION;
+    return MoveType.RAIL;
   }
 
   private buildDefaultMoves(quoteId: string, request: CreateQuoteRequest): Move[] {
@@ -226,7 +336,7 @@ export class QuoteService {
       id: `MOV-${quoteId}-${moveNumber}`,
       orderNumber: quoteId,
       moveOrder: moveNumber++,
-      moveType: MoveType.ORIGIN_PICKUP,
+      moveType: MoveType.INITIAL_PICKUP,
       origin: { 
         zip: request.originZip, 
         address: request.originAddress || `Location (${request.originZip})`
@@ -243,7 +353,7 @@ export class QuoteService {
         id: `MOV-${quoteId}-${moveNumber}`,
         orderNumber: quoteId,
         moveOrder: moveNumber++,
-        moveType: MoveType.ORIGIN_PICKUP,
+        moveType: MoveType.EXTRA_PICKUP,
         origin: { 
           zip: request.extraOriginZip, 
           address: request.extraOriginAddress || 'Extra Origin'
@@ -260,7 +370,7 @@ export class QuoteService {
       id: `MOV-${quoteId}-${moveNumber}`,
       orderNumber: quoteId,
       moveOrder: moveNumber++,
-      moveType: MoveType.RAIL_MOVE,
+      moveType: MoveType.RAIL,
       origin: { zip: request.originZip, address: 'Origin Terminal' },
       destination: { zip: request.destinationZip, address: 'Destination Terminal' }
     });
@@ -271,7 +381,7 @@ export class QuoteService {
         id: `MOV-${quoteId}-${moveNumber}`,
         orderNumber: quoteId,
         moveOrder: moveNumber++,
-        moveType: MoveType.FINAL_DELIVERY,
+        moveType: MoveType.EXTRA_DELIVERY,
         origin: { zip: request.destinationZip, address: 'Destination Terminal' },
         destination: { 
           zip: request.extraDestinationZip, 
@@ -285,7 +395,7 @@ export class QuoteService {
       id: `MOV-${quoteId}-${moveNumber}`,
       orderNumber: quoteId,
       moveOrder: moveNumber,
-      moveType: MoveType.FINAL_DELIVERY,
+      moveType: MoveType.FINAL_DESTINATION,
       origin: { 
         zip: request.extraDestinationZip || request.destinationZip, 
         address: 'Terminal'
@@ -376,7 +486,13 @@ export class QuoteService {
 
   getQuoteById(quoteId: string): Observable<QuoteRequest | undefined> {
     return this.http.get<any[]>(`${this.apiUrl}/my`).pipe(
-      map(list => (list || []).find(q => String(q.id) === String(quoteId))),
+      map(list => {
+        const found = (list || []).find(q => {
+          const idMatch = String(q.id) === String(quoteId);
+          return idMatch;
+        });
+        return found;
+      }),
       map(q => q ? this.mapApiToQuoteRequest(q) : undefined)
     );
   }
@@ -451,19 +567,15 @@ export class QuoteService {
     );
   }
 
-   createOrderFromQuote(quoteId: string, orderDetails: {
-    pickupAppointmentDate: string;
-    pickupAppointmentTime: string;
-    deliveryAppointmentDate?: string;
-    deliveryAppointmentTime?: string;
-    pickupContactName?: string;
-    pickupContactPhone?: string;
-    deliveryContactName?: string;
-    deliveryContactPhone?: string;
-  }): Observable<{ orderId: string; orderNumber: string }> {
-    return this.http.post<{ orderId: string; orderNumber: string }>(
+  holdQuote(quoteId: string): Observable<{ message: string; quoteId: string; status: string }> {
+    // Call backend hold endpoint to lock in the quoted price without creating an order
+    return this.http.post<any>(`${this.apiUrl}/${quoteId}/hold`, {});
+  }
+
+   createOrderFromQuote(quoteId: string, payload: any): Observable<{ orderId: string; orderNumber: string; order?: any }> {
+    return this.http.post<{ orderId: string; orderNumber: string; order?: any }>(
       `${this.apiUrl}/${quoteId}/accept`,
-      orderDetails
+      payload
     );
   }
 

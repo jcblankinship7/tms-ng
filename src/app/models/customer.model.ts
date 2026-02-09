@@ -29,8 +29,7 @@ export interface Customer {
   city?: string;
   state?: string;
   zip?: string;
-  latitude?: number;
-  longitude?: number;
+  position?: { latitude?: number; longitude?: number };
   lineOfCredit: number;
   currentBalance: number;
   pendingCharges: number;
@@ -52,8 +51,7 @@ export interface CreateCustomer {
   city?: string;
   state?: string;
   zip?: string;
-  latitude?: number;
-  longitude?: number;
+  position?: { latitude?: number; longitude?: number };
   lineOfCredit?: number;
   quoteType: QuoteType;
   patronCode: string;
@@ -73,8 +71,7 @@ export interface UpdateCustomer {
   city?: string;
   state?: string;
   zip?: string;
-  latitude?: number;
-  longitude?: number;
+  position?: { latitude?: number; longitude?: number };
   lineOfCredit?: number;
   quoteType: QuoteType;
   patronCode: string;
